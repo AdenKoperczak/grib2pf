@@ -5,6 +5,9 @@ import numpy as np
 from PIL import Image
 import requests
 import gzip
+import time
+
+TIME_FMT = "[%Y-%m-%d %H:%M:%S.{}]"
 
 class Palette:
     def __init__(self, filename = None):
@@ -256,11 +259,11 @@ End:
 
     def _log(self, *args, **kwargs):
         if self.verbose:
-            print(*args, **kwargs)
+            t = time.strftime(TIME_FMT).format(format(round((time.time() % 1) * 1000), "0>3"))
+            print(t, *args, **kwargs)
 
 if __name__ == "__main__":
     import argparse
-    import time
     import sys
     import json
 
