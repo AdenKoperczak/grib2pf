@@ -1,0 +1,4 @@
+pygrib
+numpy
+Pillow
+requests
