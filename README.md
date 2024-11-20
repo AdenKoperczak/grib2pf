@@ -46,7 +46,7 @@ paths to match your source folder.
 ```
 
 This basic setup will update the placefile every minute. Updating the placefile
-is somewhat slow, and the MRMS data is only updated every minute (I think), so
+is somewhat slow, and the MRMS data is only updated every other minute, so
 this is should be enough. In order to stop it use press CTRL-C in the terminal
 it launches.
 
