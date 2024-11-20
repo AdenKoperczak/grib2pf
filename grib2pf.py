@@ -83,23 +83,6 @@ class Palette:
                         e.add_note(f"in color table {repr(filename)}, line {i + 1}\n{line}")
                         raise e
         self.values = sorted(self.values, key = lambda a: a[0])
-        """
-        self.values = [
-            (10, 0, 22, 79, 200),
-            (15, 0, 72, 114, 200),
-            (20, 1, 131, 256, 200),
-            (25, 2, 178, 189, 220),
-            (30, 2, 233, 228, 220),
-            (35, 225, 192, 0, 220),
-            (40, 229, 135, 3, 220),
-            (45, 240, 2, 7, 220),
-            (50, 196, 0, 0, 220),
-            (55, 158, 1, 3, 220),
-            (60, 214, 50, 154, 220),
-            (65, 162, 20, 145, 220),
-            (80, 255, 255, 255, 220),
-        ]
-        """
 
     def _parse_color(self, text, alpha, optional):
         parts = text.split(" ")
@@ -123,7 +106,7 @@ class Palette:
         raise Exception(f"Could not parse color {repr(text)}")
 
     def get_at(self, v):
-        # TODO idk if rf exists
+        # TODO RF?
         v = v * self.scale + self.offset
         if v < self.values[0][0]:
             return (0, 0, 0, 0)
