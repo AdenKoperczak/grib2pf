@@ -86,7 +86,8 @@ Below are all the settings supported by this program.
 `url`: The URL to pull from. Should probably come from
 "https://mrms.ncep.noaa.gov/data"
 "https://mrms.ncep.noaa.gov/data/2D/MergedBaseReflectivity/MRMS\_MergedBaseReflectivity.latest.grib2.gz"
-is a useful reflectivity plot
+is a useful reflectivity plot. Descriptions of the plots can be found at
+(https://www.nssl.noaa.gov/projects/mrms/operational/tables.php)
 
 `imageFile`: The file name were the image should be written. Should be an
 absolute path to a png
