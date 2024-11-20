@@ -45,10 +45,10 @@ paths to match your source folder.
 }
 ```
 
-This basic setup will make a update the placefile every minute. Updating the
-placefile is somewhat slow, and the MRMS data is only updated every minute (I
-think), so this is often enough. In order to stop it use press CTRL-C in the
-terminal it launches.
+This basic setup will update the placefile every minute. Updating the placefile
+is somewhat slow, and the MRMS data is only updated every minute (I think), so
+this is should be enough. In order to stop it use press CTRL-C in the terminal
+it launches.
 
 You can create multiple setting files, and run them concurrently.
 
@@ -64,6 +64,8 @@ command into it to start the program
 ```
 py.exe grib2pf.py settings.json
 ```
+You can replace `settings.json` with another file in order to run using a
+diffrent product.
 
 #### Shortcut (Windows)
 You can create a shortcut, and use the following line as the target to start
@@ -81,36 +83,36 @@ as the URL for a placefile in Supercell-WX.
 ## Settings
 Below are all the settings supported by this program.
 
-url: The URL to pull from. Should probably come from
+`url`: The URL to pull from. Should probably come from
 "https://mrms.ncep.noaa.gov/data"
 "https://mrms.ncep.noaa.gov/data/2D/MergedBaseReflectivity/MRMS\_MergedBaseReflectivity.latest.grib2.gz"
 is a useful reflectivity plot
 
-imageFile: The file name were the image should be written. Should be an
-absolute path to a png.
+`imageFile`: The file name were the image should be written. Should be an
+absolute path to a png
 
-placeFile: The file name were the placefile should be written
+`placeFile`: The file name were the placefile should be written
 
-palette: The path to a GRS color table to use for this plot. Useful for non
+`palette`: The path to a GRS color table to use for this plot. Useful for non
 reflectivity plots
 
-title: The title to display in Supercell-WX
+`title`: The title to display in Supercell-WX
 
-refresh: How often Supercell-WX should refresh the placefile, in seconds
+`refresh`: How often Supercell-WX should refresh the placefile, in seconds
 
-imageURL: The URL at which the image will be hosted, Unnecessary for local
-usage only
+`imageURL`: The URL at which the image will be hosted. Unnecessary for local
+usage, but useful for web hosting
 
-imageWidth: The width of the image to be generated. Only effects the resolution
+`imageWidth`: The width of the image to be generated. Only effects the resolution
 off the plot
 
-imageHeight: The height of the image to be generated. Only effects the
+`imageHeight`: The height of the image to be generated. Only effects the
 resolution off the plot
 
-regenerateTime: How often to regenerate the image and placefile in seconds.
-Without this, it will only generate it once.
+`regenerateTime`: How often to regenerate the image and placefile in seconds.
+Without this, it will only generate once
 
-verbose: Print status messages if true
+`verbose`: Print status messages if true
 
 ## Other Radar Viewers
 If another radar viewer uses a Mercator projection and has placefile support,
