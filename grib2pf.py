@@ -121,7 +121,7 @@ class Palette:
                 return value[5:]
         for i, upper in enumerate(self.values[1:]):
             if upper[0] > v:
-                lower = self.values[i - 1]
+                lower = self.values[i]
                 pos = (v - lower[0]) / (upper[0] - lower[0])
 
                 lowerC = lower[1:5]
