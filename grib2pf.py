@@ -6,10 +6,12 @@ from PIL import Image
 import requests
 import gzip
 import time
+import re
 
 TIME_FMT = "[%Y-%m-%d %H:%M:%S.{}]"
 
 class Palette:
+    COMBINE_SPACES_REGEX = re.compile(r"  +")
     def __init__(self, filename = None):
         self.scale  = 1
         self.offset = 0
@@ -88,7 +90,7 @@ class Palette:
         self.values = sorted(self.values, key = lambda a: a[0])
 
     def _parse_color(self, text, alpha, optional):
-        parts = text.split(" ")
+        parts = self.COMBINE_SPACES_REGEX.sub(" ", text).split(" ")
 
         try:
             if alpha:
