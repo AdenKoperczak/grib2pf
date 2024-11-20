@@ -185,10 +185,14 @@ End:
         self.lonR = None
 
     def pull_data(self):
-        self._log("Pulling data")
-        res = requests.get(self.url)
-        self.grb = pygrib.fromstring(gzip.decompress(res.content))
-        self._log("Data pulled")
+        try:
+            self._log("Pulling data")
+            res = requests.get(self.url)
+            self.grb = pygrib.fromstring(gzip.decompress(res.content))
+            self._log("Data pulled")
+        except Exception as e:
+            self._log(f"Failed to pull data with error '{e}'")
+
 
     def forget_data(self):
         self._log("Forgetting data")
