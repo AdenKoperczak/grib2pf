@@ -205,6 +205,10 @@ End:
         self.lonR = None
 
     def generate_placefile(self):
+        if self.grb is None:
+            self._log("generate_placefile with no data")
+            return
+
         self._log("Generating placefile")
         if self.latT is None:
             lats, lons = self.grb.latlons()
@@ -225,6 +229,10 @@ End:
                 ))
 
     def generate_image(self):
+        if self.grb is None:
+            self._log("generate_image with no data")
+            return
+
         self._log("Preparing data")
         values, lats, lons = self.grb.data()
 
