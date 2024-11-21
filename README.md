@@ -7,32 +7,70 @@ weather radar in Supercell-WX.
 This installation guide is written for non technical users. More technical
 users may want to modify the procedure.
 
-### Python
-You will need Python. I developed using Python3.12, but any currently supported
-versions of Python should work.
 
-On Linux, download using your package manager (apt, pacman, etc)
+### Setting Up WSL
+Unfortunately, all Python libraries I can find only work under Linux and MacOS.
+Fortunately, windows now includes Windows Subsystem for Linux (WSL) which makes
+installing the needed libraries possible, although somewhat complicated.
 
-On Windows, you can download Python from the Windows Store, using `winget`, or
-directly from the Python website (https://www.python.org/downloads/). Make sure
-that "py.exe" is on your path as well.
+I recommend following the guide at
+(https://learn.microsoft.com/en-us/windows/wsl/install). There is no need to
+change the default Linux distro, as the rest of this guide assumes you are
+using Ubuntu.
 
-### Downloading the Repository
-You can download the repository by pressing the green "Code" button on GitHub,
-and selecting Download ZIP. You can also clone the repository using git, if you
-prefer. Unzip this in a reasonable location, where you will not accidentally
-delete it. The folder will be called the source folder from now on
+### Linux Shell Basics
+You can launch the Ubuntu WSL from the start menu, or by pressing the Windows
+key and searching for Ubuntu. This will launch a Linux shell/command
+line/terminal. It looks intimidating at first, but it gets easier as you work
+with it. Lets start with some basic commands. You start in your Linux home
+folder. To list files in it, type `ls`. To start with you will not have any
+files there. Next we can use `cd` to change directories (directories are the
+same as folders). Type the following, replacing "{User}" with your Windows
+username.
+```
+cd /mnt/c/Users/{User}/Desktop
+```
+This will move you to your Windows desktop. Use `ls` to view the files on your
+desktop. You will notice that Linux uses `/` in paths, unlike Windows which
+uses `\`. You may also notice that `/mnt/c/Users/{User}/Desktop` looks awfully
+similar to `C:\Users\{User}\Desktop`. This should give you a good idea on how
+to navigate your Windows files. Now use `cd ..`. This moves you up one
+directory to `/mnt/c/Users/{User}`. Now you can run `cd Downloads` to move into
+your Downloads folder.
 
-### Installing Python Dependencies
-For Windows, double click on the `setup.bat` to install python dependencies.
-For Linux, run the `setup.sh` script. You may need to use a virtual environment
-or user level install in order for this to work on Linux.
+On Linux, you usually install software using a package manager, not by
+downloading from the internet. On Ubuntu we will be using `apt` to install
+the needed packages (software). This will also require the usage of the `sudo`
+(SuperUser DO) command. This lets you run a program as root/admin.
+
+### Installing Needed Packages
+For this program you will need a few packages. The below command will ensure
+you have all the packages you need. (python3 is the programming language this
+is written in. python3-pip is a package manager for python, git lets you pull
+code from GitHub.)
+```
+sudo apt install python3 python3-pip git
+``
+
+### Cloning the repo
+Navigate to a location where you want to install this program. Then use the
+following command to clone (download) the repository for GitHub. This will
+create a `grib2pf` folder.
+```
+git clone https://github.com/AdenKoperczak/grib2pf.git
+```
+Next `cd` into `grib2pf`. This is now refered to as the source folder.
+
+To update this code you can simply use `git pull`.
+
+### Running the setup script.
+Simply type `./setup.sh` to run the setup script. This installs needed Python
+dependencies, and creates a basic `settings.json`
 
 ### Set Settings
-Settings are done through a JSON file. Create a file called `settings.json` in
-your source folder, and open it with a text editor (such as notepad). Below is
-an example settings file for MRMS base reflectivity. Make sure to change the
-paths to match your source folder.
+Settings are done through a JSON file. The setup script created a file called
+`settings.json` in your source folder. You can open it with a text editor
+(such as Notepad). It should look something like below.
 
 ```
 {
@@ -53,32 +91,20 @@ it launches.
 You can create multiple setting files, and run them concurrently.
 
 ### Running
-#### run.bat/run.sh
-Double clicking run.bat (Windows) or run.sh (Linux) should run the program.
-This will only use `settings.json` for the settings.
+#### run.sh
+From the Linux shell, type `./run.sh` while in your source directory.
 
-#### Command Line (Windows)
-In File Explorer, while in your source folder, click on the address box, type
-`cmd`, and press Enter. This will bring up a command prompt. Copy the following
-command into it to start the program
+#### From The Shell Directly
+The below command lets you run it directly from your Shell. By changing
+`settings.json` you can use diffrent settings files.
 ```
-py.exe grib2pf.py settings.json
+python3 grib2pf.py settings.json
 ```
-You can replace `settings.json` with another file in order to run using a
-diffrent product.
-
-#### Shortcut (Windows)
-You can create a shortcut, and use the following line as the target to start
-the script. Make sure to correctly set the paths.
-```
-py.exe "{source folder}/grib2pf.py" "{source folder}/settings.json"
-```
-You can also replace `settings.json` with another file in order to run using a
-different product.
 
 ### Adding To Supercell-WX
-Copy the path to the placefile (`placeFile` in `settings.json`), and use it
-as the URL for a placefile in Supercell-WX.
+Copy the path to the placefile, and use it as the URL for a placefile in
+Supercell-WX. Because Supercell-WX is running under Windows, you need to use
+the Windows path to the placefile.
 
 ## Settings
 Below are all the settings supported by this program.
