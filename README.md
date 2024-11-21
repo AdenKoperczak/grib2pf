@@ -50,7 +50,7 @@ is written in. python3-pip is a package manager for python, git lets you pull
 code from GitHub.)
 ```
 sudo apt install python3 python3-pip git
-``
+```
 
 ### Cloning the repo
 Navigate to a location where you want to install this program. Then use the
