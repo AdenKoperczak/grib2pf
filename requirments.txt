@@ -1,4 +1,5 @@
-pygrib
+cfgrib
+xarray
 numpy
 Pillow
 requests

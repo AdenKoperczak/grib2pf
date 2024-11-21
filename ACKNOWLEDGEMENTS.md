@@ -4,11 +4,12 @@ Acknowledgements
 Dependencies
 ------------
 
-grib2pf uses (but does not distribute) code from the following dependencies:
+grib2pf uses, **but does not distribute**, the following dependencies:
 
 | Dependency | License | Notes |
 | ---------- | ------- | ----- |
-| [pygrib](https://jswhit.github.io/pygrib/) | [MIT License](https://spdx.org/licenses/MIT.html) |
+| [cfgrib](https://github.com/ecmwf/cfgrib) | [Apache-2.0 license](https://spdx.org/licenses/Apache-2.0.html) |
+| [xarray](https://xarray.dev/) | [Apache-2.0 license](https://spdx.org/licenses/Apache-2.0.html) |
 | [numpy](https://numpy.org) | [BSD 3 Clause](https://spdx.org/licenses/BSD-3-Clause.html)
 | [Pillow](https://python-pillow.org/) | [MIT-CMU License](https://spdx.org/licenses/MIT-CMU.html) |
 | [requests](https://docs.python-requests.org/) | [Apache-2.0 license](https://spdx.org/licenses/Apache-2.0.html) |

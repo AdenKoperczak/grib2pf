@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 
-import pygrib
+import xarray as xr
 import numpy as np
 from PIL import Image
 import requests
 import gzip
 import time
 import re
+import tempfile
 
 TIME_FMT = "[%Y-%m-%d %H:%M:%S.{}]"
 
@@ -180,7 +181,7 @@ End:
         self.height = height
         self.verbose = verbose
 
-        self.grb = None
+        self.data = None
         self.latT = None
         self.latB = None
         self.lonL = None
@@ -190,7 +191,13 @@ End:
         try:
             self._log("Pulling data")
             res = requests.get(self.url)
-            self.grb = pygrib.fromstring(gzip.decompress(res.content))
+            raw = gzip.decompress(res.content)
+
+            with tempfile.NamedTemporaryFile() as file:
+                file.write(raw)
+                file.seek(0)
+                self.data = xr.load_dataset(file.name, engine = "cfgrib")
+
             self._log("Data pulled")
         except Exception as e:
             self._log(f"Failed to pull data with error '{e}'")
@@ -198,20 +205,21 @@ End:
 
     def forget_data(self):
         self._log("Forgetting data")
-        self.grb = None
+        self.data = None
         self.latT = None
         self.latB = None
         self.lonL = None
         self.lonR = None
 
     def generate_placefile(self):
-        if self.grb is None:
+        if self.data is None:
             self._log("generate_placefile with no data")
             return
 
         self._log("Generating placefile")
         if self.latT is None:
-            lats, lons = self.grb.latlons()
+            lats = np.array(self.data.coords["latitude"])
+            lons = np.array(self.data.coords["longitude"])
             self.latT = round(lats.max(), 3)
             self.latB = round(lats.min(), 3)
             self.lonL = round(lons.min() - 360, 3)
@@ -229,21 +237,22 @@ End:
                 ))
 
     def generate_image(self):
-        if self.grb is None:
+        if self.data is None:
             self._log("generate_image with no data")
             return
 
         self._log("Preparing data")
-        values, lats, lons = self.grb.data()
+        values = np.array(self.data.data_vars["unknown"])
+        lats = np.array(self.data.coords["latitude"])
+        lons = np.array(self.data.coords["longitude"])
 
         self.latT = round(lats.max(), 3)
         self.latB = round(lats.min(), 3)
         self.lonL = round(lons.min() - 360, 3)
         self.lonR = round(lons.max() - 360, 3)
 
-
-        xs = normalize(lons[0]) * self.width
-        ys = (1 - normalize(np.log(np.tan(np.pi / 4 + np.pi * lats.T[0] / 360)))) * self.height 
+        xs = normalize(lons) * self.width
+        ys = (1 - normalize(np.log(np.tan(np.pi / 4 + np.pi * lats / 360)))) * self.height 
 
         self._log("Rendering image")
         imageToDataX = np.zeros(self.width, dtype = np.int64)
