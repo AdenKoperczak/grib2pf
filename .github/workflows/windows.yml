@@ -127,6 +127,7 @@ jobs:
           --hidden-import packaging `
           --hidden-import pyproj `
           --add-binary "${{ github.workspace }}/eccodes-install/bin:."
+        cp *.spec dist
 
     - name: Upload grib2pf Executable
       uses: actions/upload-artifact@v4
