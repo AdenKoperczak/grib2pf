@@ -35,7 +35,7 @@ jobs:
         git clone --depth 1 https://github.com/ecmwf/eccodes.git $env:ECCODES_SRC
         cd $env:ECCODES_SRC
         git fetch --all --tags --prune
-        git checkout tags/2.38.0 develop
+        git checkout tags/2.38.0
 
     - name: Checkout ecbuild
       shell: pwsh
@@ -91,6 +91,9 @@ jobs:
       shell: pwsh
       run: |
         git clone https://github.com/jswhit/pygrib.git $env:PYGRIB_SRC
+        cd $env:PYGRIB_SRC
+        git fetch --all --tags --prune
+        git checkout tags/v2.1.6rel
 
     - name: Install PyGrib
       shell: pwsh
