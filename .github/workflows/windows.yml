@@ -32,15 +32,15 @@ jobs:
     - name: Checkout eccodes
       shell: pwsh
       run: |
-        git clone --depth 1 https://github.com/ecmwf/eccodes.git $ECCODES_SRC
-        cd $ECCODES_SRC
+        git clone --depth 1 https://github.com/ecmwf/eccodes.git $env:ECCODES_SRC
+        cd $env:ECCODES_SRC
         git fetch --all --tags --prune
         git checkout tags/2.38.0 develop
 
     - name: Checkout ecbuild
       shell: pwsh
       run: |
-        git clone --depth 1 https://github.com/ecmwf/ecbuild.git $ECBUILD_SRC
+        git clone --depth 1 https://github.com/ecmwf/ecbuild.git $env:ECBUILD_SRC
 
     - name: Install Conda Packages
       shell: pwsh
@@ -70,7 +70,7 @@ jobs:
           -D ENABLE_MEMFS=1 `
           -D ENABLE_EXTRA_TESTS=ON `
           -D WINDOWS_TESTING_BASHRC=%WINDOWS_TESTING_BASHRC% `
-          $ECCODES_SRC
+          $env:ECCODES_SRC
         set CL /MP
         nmake
 
@@ -90,12 +90,12 @@ jobs:
     - name: Clone PyGrib
       shell: pwsh
       run: |
-        git clone https://github.com/jswhit/pygrib.git $PYGRIB_SRC
+        git clone https://github.com/jswhit/pygrib.git $env:PYGRIB_SRC
 
     - name: Install PyGrib
       shell: pwsh
       run: |
-        cd $PYGRIB_SRC
+        cd $env:PYGRIB_SRC
         $env:ECCODES_DIR = "${{ github.workspace }}/eccodes-install"
         pip install -e
 
