@@ -113,7 +113,7 @@ jobs:
         cd ${{ github.workspace }}/source
         pip install pyinstaller
         pip install -r requirements.txt
-        python3 -m pyinstaller grib2pf.py
+        pyinstaller grib2pf.py
 
     - name: Upload grib2pf Executable
       uses: actions/upload-artifact@v4
