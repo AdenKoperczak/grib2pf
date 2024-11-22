@@ -100,7 +100,7 @@ jobs:
       run: |
         cd $env:PYGRIB_SRC
         $env:ECCODES_DIR = "${{ github.workspace }}/eccodes-install"
-        pip install -e
+        pip install -e .
 
     - name: Checkout grib2pf
       uses: actions/checkout@v4
