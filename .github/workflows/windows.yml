@@ -66,6 +66,7 @@ jobs:
           -D ENABLE_NETCDF=0 `
           -D ENABLE_JPG=1 `
           -D ENABLE_AEC=0 `
+          -D ENABLE_PNG=ON `
           -D IEEE_LE=1 `
           -D ENABLE_MEMFS=1 `
           -D ENABLE_EXTRA_TESTS=ON `
@@ -113,7 +114,10 @@ jobs:
         cd ${{ github.workspace }}/source
         pip install pyinstaller
         pip install -r requirements.txt
-        pyinstaller grib2pf.py --hidden-import packaging --hidden-import pyproj --add-binary "${{ github.workspace }}/eccodes-install/bin:."
+        pyinstaller grib2pf.py `
+          --hidden-import packaging `
+          --hidden-import pyproj `
+          --add-binary "${{ github.workspace }}/eccodes-install/bin:."
 
     - name: Upload grib2pf Executable
       uses: actions/upload-artifact@v4
