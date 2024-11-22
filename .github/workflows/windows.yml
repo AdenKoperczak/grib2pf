@@ -23,7 +23,7 @@ jobs:
       with:
         auto-update-conda: true
         python-version: "3.11"
-    - name: Configure
+    - name: Configure eccodes
       shell: pwsh
       run: |
         git config --global core.symlinks true
