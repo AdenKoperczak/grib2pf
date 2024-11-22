@@ -163,7 +163,8 @@ End:
             imageURL = None,
             width = 1920,
             height = 1080,
-            verbose = False):
+            verbose = False,
+            timeout = 30):
 
         self.url = url
         self.imageFile = imageFile
@@ -179,6 +180,7 @@ End:
         self.width = width
         self.height = height
         self.verbose = verbose
+        self.timeout = timeout
 
         self.grb = None
         self.latT = None
@@ -189,7 +191,7 @@ End:
     def pull_data(self):
         try:
             self._log("Pulling data")
-            res = requests.get(self.url)
+            res = requests.get(self.url, timeout = self.timeout)
             self.grb = pygrib.fromstring(gzip.decompress(res.content))
             self._log("Data pulled")
         except Exception as e:
@@ -319,6 +321,8 @@ if __name__ == "__main__":
                    help = "How often to regenerate the image and placefile in seconds. Defaults to not regenerating")
     p.add_argument("--verbose", "-v", action = "store_true", default = False,
                    help = "Print status messages")
+    p.add_argument("--timeout", "-O", type = int, default = 30,
+                   help = "How long to wait for a responce from the URL in seconds. Defaults to 30s. No way to disable, because that will lock up the program")
 
     if len(sys.argv) == 2 and sys.argv[1] not in ("-h", "--help"):
         with open(sys.argv[1]) as file:
@@ -336,7 +340,8 @@ if __name__ == "__main__":
             args.get("imageURL", None),
             args.get("imageWidth", 1920),
             args.get("imageHeight", 1080),
-            args.get("verbose", False))
+            args.get("verbose", False),
+            args.get("timeout", 30))
 
     last = time.time()
     placefile.pull_data()

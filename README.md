@@ -141,6 +141,9 @@ Without this, it will only generate once
 
 `verbose`: Print status messages if true
 
+`timeout`: How long to wait for a responce from the URL in seconds. Defaults to
+30s. No way to disable, because that will lock up the program
+
 ## Other Radar Viewers
 If another radar viewer uses a Mercator projection and has placefile support,
 this project should work, although I give no guaranties.
