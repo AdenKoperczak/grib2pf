@@ -113,7 +113,7 @@ jobs:
         cd ${{ github.workspace }}/source
         pip install pyinstaller
         pip install -r requirements.txt
-        pyinstaller grib2pf.py --hidden-import packaging --hidden-import pyproj --hidden-import -add-binary "${{ github.workspace }}/eccodes-install/bin:."
+        pyinstaller grib2pf.py --hidden-import packaging --hidden-import pyproj -add-binary "${{ github.workspace }}/eccodes-install/bin:."
 
     - name: Upload grib2pf Executable
       uses: actions/upload-artifact@v4
