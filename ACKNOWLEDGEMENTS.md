@@ -4,7 +4,7 @@ Acknowledgements
 Dependencies
 ------------
 
-grib2pf uses (but does not distribute) code from the following dependencies:
+grib2pf uses code from the following dependencies:
 
 | Dependency | License | Notes |
 | ---------- | ------- | ----- |
