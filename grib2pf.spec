@@ -21,6 +21,19 @@ a = Analysis(
     optimize=0,
 )
 
+# exclude binaries
+toKeep = []
+
+for (dest, source, kind) in a.binaries:
+    filename = os.path.split(dest)[1]
+    if filename.startswith("api-ms-win-")  or \
+       filename == "MSVCP140.dll"          or \
+       filename.startswith("VCRUNTIME140"):
+        continue
+
+    toKeep.append((dest, source, kind))
+
+a.binaries = toKeep
 
 pyz = PYZ(a.pure)
 
