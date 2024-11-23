@@ -289,8 +289,8 @@ if __name__ == "__main__":
     defaultSettings = f"""
 {{
     "url": "https://mrms.ncep.noaa.gov/data/2D/MergedBaseReflectivity/MRMS_MergedBaseReflectivity.latest.grib2.gz",
-    "imageFile": "{os.path.join(location, 'baseReflectivity.png')}",
-    "placeFile": "{os.path.join(location, 'baseReflectivity.txt')}",
+    "imageFile": "{os.path.join(location, 'baseReflectivity.png').replace("\\", "\\\\")}",
+    "placeFile": "{os.path.join(location, 'baseReflectivity.txt').replace("\\", "\\\\")}",
     "verbose": true,
     "refresh": 15,
     "regenerateTime": 60
