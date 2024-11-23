@@ -24,10 +24,10 @@ a = Analysis(
 # exclude binaries
 toKeep = []
 
-EXCLUDE = set(
+EXCLUDE = {
         "MSVCP140.dll",
         "ucrtbase.dll",
-)
+}
 for (dest, source, kind) in a.binaries:
     filename = os.path.split(dest)[1]
     if filename.startswith("api-ms-win-")  or \
