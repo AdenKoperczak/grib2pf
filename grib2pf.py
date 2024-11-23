@@ -206,6 +206,16 @@ End:
         self.lonL = None
         self.lonR = None
 
+    def _set_bounds(self, lats, lons):
+        lons = lons[0]
+        lats = lats.T[0]
+        self.latT = round(lats.max(), 3)
+        self.latB = round(lats.min(), 3)
+        self.lonL = round(lons.min() - 360, 3)
+        self.lonR = round(lons.max() - 360, 3)
+        return lats, lons
+
+
     def generate_placefile(self):
         if self.grb is None:
             self._log("generate_placefile with no data")
@@ -214,10 +224,7 @@ End:
         self._log("Generating placefile")
         if self.latT is None:
             lats, lons = self.grb.latlons()
-            self.latT = round(lats.max(), 3)
-            self.latB = round(lats.min(), 3)
-            self.lonL = round(lons.min() - 360, 3)
-            self.lonR = round(lons.max() - 360, 3)
+            self._set_bounds(lats, lons)
 
         with open(self.placeFile, "w") as file:
             file.write(self.PLACEFILE_TEMPLATE.format(
@@ -238,14 +245,10 @@ End:
         self._log("Preparing data")
         values, lats, lons = self.grb.data()
 
-        self.latT = round(lats.max(), 3)
-        self.latB = round(lats.min(), 3)
-        self.lonL = round(lons.min() - 360, 3)
-        self.lonR = round(lons.max() - 360, 3)
+        lats, lons = self._set_bounds(lats, lons)
 
-
-        xs = normalize(lons[0]) * self.width
-        ys = (1 - normalize(np.log(np.tan(np.pi / 4 + np.pi * lats.T[0] / 360)))) * self.height 
+        xs = normalize(lons) * self.width
+        ys = (1 - normalize(np.log(np.tan(np.pi / 4 + np.pi * lats / 360)))) * self.height
 
         self._log("Rendering image")
         imageToDataX = np.zeros(self.width, dtype = np.int64)
@@ -282,18 +285,25 @@ if __name__ == "__main__":
     import argparse
     import sys
     import json
+    import os
 
-    """
-    url,
-    imageFile,
-    placeFile,
-    palette = None,
-    title = "GRIB Placefile",
-    refresh = 1,
-    imageURL = None,
-    width = 1920,
-    height = 1080):
-    """
+    location = os.path.split(__file__)[0]
+
+    def format_file(filename):
+        return os.path.join(location, filename).replace("\\", "\\\\")
+
+    defaultSettings = f"""
+{{
+    "url": "https://mrms.ncep.noaa.gov/data/2D/MergedBaseReflectivity/MRMS_MergedBaseReflectivity.latest.grib2.gz",
+    "imageFile": "{format_file('baseReflectivity.png')}",
+    "placeFile": "{format_file('baseReflectivity.txt')}",
+    "verbose": true,
+    "refresh": 15,
+    "regenerateTime": 60
+}}
+    """.strip()
+    defaultSettingsPath = os.path.join(location, "settings.json")
+
     p = argparse.ArgumentParser(
             prog = "grib2pf",
             description = "Generate an GRIB placefile for use with Supercell-WX",
@@ -324,7 +334,13 @@ if __name__ == "__main__":
     p.add_argument("--timeout", "-O", type = int, default = 30,
                    help = "How long to wait for a responce from the URL in seconds. Defaults to 30s. No way to disable, because that will lock up the program")
 
-    if len(sys.argv) == 2 and sys.argv[1] not in ("-h", "--help"):
+    if len(sys.argv) == 1:
+        if not os.path.exists(defaultSettingsPath):
+            with open(defaultSettingsPath, "w") as file:
+                file.write(defaultSettings)
+        with open(defaultSettingsPath) as file:
+            args = json.load(file)
+    elif len(sys.argv) == 2 and sys.argv[1] not in ("-h", "--help"):
         with open(sys.argv[1]) as file:
             args = json.load(file)
     else:
@@ -363,4 +379,4 @@ if __name__ == "__main__":
                 placefile.generate_placefile()
                 placefile.forget_data()
         except KeyboardInterrupt:
-            exit()
+            pass

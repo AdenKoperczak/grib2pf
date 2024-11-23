@@ -1,0 +1,139 @@
+on:
+  push:
+    branches:
+      - "**"
+    tags:
+      - "**"
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+
+    name: Windows Build
+    env:
+      ECBUILD_SRC: ${{ github.workspace }}/ECBUILD
+      ECCODES_SRC: ${{ github.workspace }}/ECCODES
+      PYGRIB_SRC:  ${{ github.workspace }}/PYGRIB
+    runs-on: windows-2022
+
+    steps:
+    - name: Setup Conda
+      uses: conda-incubator/setup-miniconda@v3
+      with:
+        auto-update-conda: true
+        python-version: "3.11"
+    - name: Configure eccodes
+      shell: pwsh
+      run: |
+        git config --global core.symlinks true
+        conda config --set always_yes yes
+
+    - name: Checkout eccodes
+      shell: pwsh
+      run: |
+        git clone --depth 1 https://github.com/ecmwf/eccodes.git $env:ECCODES_SRC
+        cd $env:ECCODES_SRC
+        git fetch --all --tags --prune
+        git checkout tags/2.38.0
+
+    - name: Checkout ecbuild
+      shell: pwsh
+      run: |
+        git clone --depth 1 https://github.com/ecmwf/ecbuild.git $env:ECBUILD_SRC
+
+    - name: Install Conda Packages
+      shell: pwsh
+      run: |
+        conda install -c msys2 `
+          m2-bash `
+          m2-findutils `
+          m2-coreutils `
+          m2-grep `
+          m2-sed `
+          m2-gawk `
+          m2-diffutils `
+          m2-perl `
+          m2w64-ntldd-git
+        conda install -c conda-forge cmake libaec libpng
+
+    - name: Setup MSVC
+      uses: ilammy/msvc-dev-cmd@v1
+      with:
+        arch: x64
+        vsversion: 2022
+
+    - name: Build eccodes
+      shell: pwsh
+      run: |
+        mkdir build
+        cd build
+        cmake -G "NMake Makefiles" `
+          -D CMAKE_INSTALL_PREFIX="${{ github.workspace }}/eccodes-install" `
+          -D CMAKE_BUILD_TYPE=Release `
+          -D ENABLE_FORTRAN=0 `
+          -D ENABLE_NETCDF=0 `
+          -D ENABLE_JPG=1 `
+          -D ENABLE_AEC=0 `
+          -D ENABLE_PNG=ON `
+          -D IEEE_LE=1 `
+          -D ENABLE_MEMFS=1 `
+          -D ENABLE_EXTRA_TESTS=ON `
+          -D WINDOWS_TESTING_BASHRC=%WINDOWS_TESTING_BASHRC% `
+          $env:ECCODES_SRC
+        set CL /MP
+        nmake
+
+
+    - name: Install eccodes
+      shell: pwsh
+      run: |
+        cd build
+        nmake install
+
+    - name: Upload EcCodes Artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: eccodes
+        path: ${{ github.workspace }}/eccodes-install
+
+    - name: Clone PyGrib
+      shell: pwsh
+      run: |
+        git clone https://github.com/jswhit/pygrib.git $env:PYGRIB_SRC
+        cd $env:PYGRIB_SRC
+        git fetch --all --tags --prune
+        git checkout tags/v2.1.6rel
+
+    - name: Install PyGrib
+      shell: pwsh
+      run: |
+        cd $env:PYGRIB_SRC
+        $env:ECCODES_DIR = "${{ github.workspace }}/eccodes-install"
+        pip install -e .
+
+    - name: Checkout grib2pf
+      uses: actions/checkout@v4
+      with:
+        path: ${{ github.workspace }}/source
+
+    - name: Make Executable
+      shell: pwsh
+      run: |
+        cd ${{ github.workspace }}/source
+        pip install pyinstaller
+        pip install -r requirements.txt
+        pyinstaller grib2pf.spec
+
+    - name: Upload grib2pf Executable
+      uses: actions/upload-artifact@v4
+      with:
+        name: grib2pf
+        path: ${{ github.workspace }}/source/dist
+
+#    - name: Test eccodes
+#      shell: pwsh
+#      run: |
+#        cd build
+#        $env:Path += ";${{ github.workspace }}/build/bin"
+#        ctest -j4 --output-on-failure
