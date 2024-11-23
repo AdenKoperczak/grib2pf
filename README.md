@@ -14,9 +14,9 @@ have them. Otherwise download them from
 https://aka.ms/vs/17/release/vc\_redist.x64.exe .
 
 ### Download The Executable
-Download the executable and extract it. You will want to extract it to a
-permanent location. This program does not install itself, so where you place it
-is where it will be installed.
+Download the executable form the latest release and extract it. You will want
+to extract it to a permanent location. This program does not install itself, so
+where you place it is where it will be installed.
 
 ### Run It
 For a basic run, you can simply double click on `grib2pf.exe` or `grib2pf`.
