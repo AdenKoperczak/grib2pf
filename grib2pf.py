@@ -282,18 +282,22 @@ if __name__ == "__main__":
     import argparse
     import sys
     import json
+    import os
 
-    """
-    url,
-    imageFile,
-    placeFile,
-    palette = None,
-    title = "GRIB Placefile",
-    refresh = 1,
-    imageURL = None,
-    width = 1920,
-    height = 1080):
-    """
+    location = os.path.split(__file__)[0]
+
+    defaultSettings = f"""
+{{
+    "url": "https://mrms.ncep.noaa.gov/data/2D/MergedBaseReflectivity/MRMS_MergedBaseReflectivity.latest.grib2.gz",
+    "imageFile": "{os.path.join(location, 'baseReflectivity.png')}",
+    "placeFile": "{os.path.join(location, 'baseReflectivity.txt')}",
+    "verbose": true,
+    "refresh": 15,
+    "regenerateTime": 60
+}}
+    """.strip()
+    defaultSettingsPath = os.path.join(location, "settings.json")
+
     p = argparse.ArgumentParser(
             prog = "grib2pf",
             description = "Generate an GRIB placefile for use with Supercell-WX",
@@ -324,7 +328,13 @@ if __name__ == "__main__":
     p.add_argument("--timeout", "-O", type = int, default = 30,
                    help = "How long to wait for a responce from the URL in seconds. Defaults to 30s. No way to disable, because that will lock up the program")
 
-    if len(sys.argv) == 2 and sys.argv[1] not in ("-h", "--help"):
+    if len(sys.argv) == 1:
+        if not os.path.exists(defaultSettingsPath):
+            with open(defaultSettingsPath, "w") as file:
+                file.write(defaultSettings)
+        with open(defaultSettingsPath) as file:
+            args = json.load(file)
+    elif len(sys.argv) == 2 and sys.argv[1] not in ("-h", "--help"):
         with open(sys.argv[1]) as file:
             args = json.load(file)
     else:
@@ -363,4 +373,4 @@ if __name__ == "__main__":
                 placefile.generate_placefile()
                 placefile.forget_data()
         except KeyboardInterrupt:
-            exit()
+            pass
