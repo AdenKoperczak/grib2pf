@@ -10,7 +10,7 @@ a = Analysis(
     ],
     datas=[
         ( "README.md", '.' ),
-        ( "ACKNOWLEDGMENTS.txt", "." ),
+        ( "ACKNOWLEDGMENTS.md", "." ),
         ( "LICENCE", "." ),
     ],
     hiddenimports=['packaging', 'pyproj'],
