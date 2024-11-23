@@ -11,7 +11,7 @@ WSL follow the Linux instructions. These instructions are for the executable.
 You will need the latest Microsoft Visual C++ Runtime to run this program. If
 you have Supercell-Wx v4.5.0 running on your system, then you should already
 have them. Otherwise download them from
-https://aka.ms/vs/17/release/vc\_redist.x64.exe .
+https://aka.ms/vs/17/release/vc_redist.x64.exe .
 
 ### Download The Executable
 Download the executable form the latest release and extract it. You will want
