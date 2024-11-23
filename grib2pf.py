@@ -206,6 +206,16 @@ End:
         self.lonL = None
         self.lonR = None
 
+    def _set_bounds(self, lats, lons):
+        lons = lons[0]
+        lats = lats.T[0]
+        self.latT = round(lats.max(), 3)
+        self.latB = round(lats.min(), 3)
+        self.lonL = round(lons.min() - 360, 3)
+        self.lonR = round(lons.max() - 360, 3)
+        return lats, lons
+
+
     def generate_placefile(self):
         if self.grb is None:
             self._log("generate_placefile with no data")
@@ -214,10 +224,7 @@ End:
         self._log("Generating placefile")
         if self.latT is None:
             lats, lons = self.grb.latlons()
-            self.latT = round(lats.max(), 3)
-            self.latB = round(lats.min(), 3)
-            self.lonL = round(lons.min() - 360, 3)
-            self.lonR = round(lons.max() - 360, 3)
+            self._set_bounds(lats, lons)
 
         with open(self.placeFile, "w") as file:
             file.write(self.PLACEFILE_TEMPLATE.format(
@@ -238,14 +245,10 @@ End:
         self._log("Preparing data")
         values, lats, lons = self.grb.data()
 
-        self.latT = round(lats.max(), 3)
-        self.latB = round(lats.min(), 3)
-        self.lonL = round(lons.min() - 360, 3)
-        self.lonR = round(lons.max() - 360, 3)
+        lats, lons = self._set_bounds(lats, lons)
 
-
-        xs = normalize(lons[0]) * self.width
-        ys = (1 - normalize(np.log(np.tan(np.pi / 4 + np.pi * lats.T[0] / 360)))) * self.height 
+        xs = normalize(lons) * self.width
+        ys = (1 - normalize(np.log(np.tan(np.pi / 4 + np.pi * lats / 360)))) * self.height
 
         self._log("Rendering image")
         imageToDataX = np.zeros(self.width, dtype = np.int64)
