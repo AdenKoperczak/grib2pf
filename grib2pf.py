@@ -286,11 +286,14 @@ if __name__ == "__main__":
 
     location = os.path.split(__file__)[0]
 
+    def format_file(filename):
+        return os.path.join(location, filename).replace("\\", "\\\\")
+
     defaultSettings = f"""
 {{
     "url": "https://mrms.ncep.noaa.gov/data/2D/MergedBaseReflectivity/MRMS_MergedBaseReflectivity.latest.grib2.gz",
-    "imageFile": "{os.path.join(location, 'baseReflectivity.png').replace("\\", "\\\\")}",
-    "placeFile": "{os.path.join(location, 'baseReflectivity.txt').replace("\\", "\\\\")}",
+    "imageFile": "{format_file('baseReflectivity.png')}",
+    "placeFile": "{format_file('baseReflectivity.txt')}",
     "verbose": true,
     "refresh": 15,
     "regenerateTime": 60
