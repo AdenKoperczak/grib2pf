@@ -16,7 +16,7 @@ of this project.
 | [numpy](https://numpy.org) | [BSD 3 Clause](https://spdx.org/licenses/BSD-3-Clause.html) | 
 | [Pillow](https://python-pillow.org/) | [MIT-CMU License](https://spdx.org/licenses/MIT-CMU.html) |
 | [requests](https://docs.python-requests.org/) | [Apache-2.0 License](https://spdx.org/licenses/Apache-2.0.html) |
-| [Python](https://python.org/) | [PFS License](https://docs.python.org/3/license.html#psf-license) |
+| [Python 3.11](https://python.org/) | [PFS License](https://docs.python.org/3.11/license.html#psf-license) |
 | [certifi](https://github.com/certifi/python-certifi) | [MPL v. 2.0](http://mozilla.org/MPL/2.0/) |
 | [charset-normalizer](https://github.com/jawah/charset_normalizer) | [MIT License](https://spdx.org/licenses/MIT.html) |
 | [pyproj](https://github.com/pyproj4/pyproj) | [MIT License](https://spdx.org/licenses/MIT.html) |
@@ -27,6 +27,8 @@ of this project.
 | [OpenSSL](https://github.com/openssl/openssl) | [Apache-2.0 License](https://spdx.org/licenses/Apache-2.0.html) |
 | [libpng](http://www.libpng.org/pub/png/libpng.html) | [libpng-2.0](https://spdx.org/licenses/libpng-2.0.html) |
 | [zlib](https://zlib.net/) | [Zlib](https://spdx.org/licenses/Zlib.html) |
+| [libexpat](https://libexpat.github.io/) | [MIT License](https://spdx.org/licenses/MIT.html) |
+| [liblzma](https://tukaani.org/xz/) | [0BSD](https://spdx.org/licenses/0BSD.html) |
 
 Source
 ------
