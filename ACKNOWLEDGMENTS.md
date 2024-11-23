@@ -4,12 +4,16 @@ Acknowledgements
 Dependencies
 ------------
 
-grib2pf uses code from the following dependencies:
+grib2pf uses code from the following dependencies in its executable form.
+All code is provided under its original licence and copyright. Any issues
+with the executable should be reported to Aden Koperczak or other maintainers
+of this project.
 
 | Dependency | License | Notes |
 | ---------- | ------- | ----- |
-| [pygrib](https://jswhit.github.io/pygrib/) | [MIT License](https://spdx.org/licenses/MIT.html) |
-| [numpy](https://numpy.org) | [BSD 3 Clause](https://spdx.org/licenses/BSD-3-Clause.html)
+| [pygrib](https://jswhit.github.io/pygrib/) | [MIT License](https://spdx.org/licenses/MIT.html) | Compiled for this project
+| [ecCodes](https://github.com/ecmwf/eccodes) | [Apache-2.0 License](https://spdx.org/licenses/Apache-2.0.html) | Compiled for this project
+| [numpy](https://numpy.org) | [BSD 3 Clause](https://spdx.org/licenses/BSD-3-Clause.html) | 
 | [Pillow](https://python-pillow.org/) | [MIT-CMU License](https://spdx.org/licenses/MIT-CMU.html) |
 | [requests](https://docs.python-requests.org/) | [Apache-2.0 License](https://spdx.org/licenses/Apache-2.0.html) |
 | [Python](https://python.org/) | [PFS License](https://docs.python.org/3/license.html#psf-license) |
@@ -18,6 +22,11 @@ grib2pf uses code from the following dependencies:
 | [pyproj](https://github.com/pyproj4/pyproj) | [MIT License](https://spdx.org/licenses/MIT.html) |
 | [setuptools](https://github.com/pypa/setuptools) | [MIT License](https://spdx.org/licenses/MIT.html) |
 | [wheel](https://github.com/pypa/wheel) | [MIT License](https://spdx.org/licenses/MIT.html) |
+| [libffi](https://github.com/libffi/libffi) | [MIT License](https://spdx.org/licenses/MIT.html) |
+| [bzip2](https://sourceware.org/bzip2/index.html) | [bzip2-1.0.6](https://spdx.org/licenses/bzip2-1.0.6.html) |
+| [OpenSSL](https://github.com/openssl/openssl) | [Apache-2.0 License](https://spdx.org/licenses/Apache-2.0.html) |
+| [libpng](http://www.libpng.org/pub/png/libpng.html) | [libpng-2.0](https://spdx.org/licenses/libpng-2.0.html) |
+| [zlib](https://zlib.net/) | [Zlib](https://spdx.org/licenses/Zlib.html) |
 
 Source
 ------
