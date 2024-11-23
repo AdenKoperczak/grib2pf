@@ -21,7 +21,7 @@ where you place it is where it will be installed.
 ### Run It
 For a basic run, you can simply double click on `grib2pf.exe` or `grib2pf`.
 This will put a basic settings file (`settings.json`) in the `_internal` folder.
-It should look like bellow, where `{_internal folder}` is replaced by the path
+It should look like below, where `{_internal folder}` is replaced by the path
 to the `_internal` folder.
 ```
 {
