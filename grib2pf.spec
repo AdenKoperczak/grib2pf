@@ -8,7 +8,11 @@ a = Analysis(
         ('D:\\a\\grib2pf\\grib2pf\\eccodes-install\\bin\\eccodes.dll', '.'),
         ('D:\\a\\grib2pf\\grib2pf\\eccodes-install\\bin\\eccodes_memfs.dll', '.')
     ],
-    datas=[],
+    datas=[
+        ( "README.md", '.' ),
+        ( "ACKNOWLEDGMENTS.txt", "." ),
+        ( "LICENCE", "." ),
+    ],
     hiddenimports=['packaging', 'pyproj'],
     hookspath=[],
     hooksconfig={},
