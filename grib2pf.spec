@@ -11,7 +11,6 @@ a = Analysis(
     datas=[
         ( "README.md", '.' ),
         ( "ACKNOWLEDGMENTS.md", "." ),
-        ( "LICENCE", "." ),
     ],
     hiddenimports=['packaging', 'pyproj'],
     hookspath=[],
