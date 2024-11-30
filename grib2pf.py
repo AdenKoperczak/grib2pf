@@ -78,10 +78,10 @@ class Palette:
                             self.values.append(self._parse_color(value, True, True))
                         elif name == "solidcolor":
                             color = self._parse_color(value, False, False)
-                            self.values.append(color, color[1:])
+                            self.values.append(color + color[1:])
                         elif name == "solidcolor4":
                             color = self._parse_color(value, True, False)
-                            self.values.append(color, color[1:])
+                            self.values.append(color + color[1:])
                         else:
                             raise Exception(f"Unknown name {repr(name)}")
                     except Exception as e:
