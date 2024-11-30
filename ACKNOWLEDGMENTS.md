@@ -49,3 +49,4 @@ grib2pf uses assets from the following sources:
 | Source | License | Notes |
 | ------ | ------- | ----- |
 | [NOAA's Weather and Climate Toolkit](https://www.ncdc.noaa.gov/wct/) | Public Domain | Default Color Table |
+| [Supercell Wx](https://github.com/dpaulat/supercell-wx) | [MIT License](https://spdx.org/licenses/MIT.html) | Converted Color Tables |
