@@ -281,13 +281,12 @@ End:
             t = time.strftime(TIME_FMT).format(format(round((time.time() % 1) * 1000), "0>3"))
             print(t, f"[{self.title}]", *args, **kwargs)
 
-
 if __name__ == "__main__":
     import argparse
     import sys
-    import json
     import os
     import asyncio
+    from jsonc_parser.parser import JsoncParser
 
     async def run_setting(settings):
         placefile = GRIBPlacefile(
@@ -345,7 +344,8 @@ if __name__ == "__main__":
     "regenerateTime": 60
 }}
     """.strip()
-    defaultSettingsPath = os.path.join(location, "settings.json")
+    defaultSettingsPath  = os.path.join(location, "settings.jsonc")
+    defaultSettingsPath2 = os.path.join(location, "settings.json")
 
     p = argparse.ArgumentParser(
             prog = "grib2pf",
@@ -378,14 +378,15 @@ if __name__ == "__main__":
                    help = "How long to wait for a responce from the URL in seconds. Defaults to 30s. No way to disable, because that will lock up the program")
 
     if len(sys.argv) == 1:
-        if not os.path.exists(defaultSettingsPath):
-            with open(defaultSettingsPath, "w") as file:
-                file.write(defaultSettings)
-        with open(defaultSettingsPath) as file:
-            args = json.load(file)
+        if os.path.exists(defaultSettingsPath2):
+            args = JsoncParser.parse_file(defaultSettingsPath2)
+        else:
+            if not os.path.exists(defaultSettingsPath):
+                with open(defaultSettingsPath, "w") as file:
+                    file.write(defaultSettings)
+            args = JsoncParser.parse_file(defaultSettingsPath)
     elif len(sys.argv) == 2 and sys.argv[1] not in ("-h", "--help"):
-        with open(sys.argv[1]) as file:
-            args = json.load(file)
+        args = JsoncParser.parse_file(sys.argv[1])
     else:
         args = vars(p.parse_args())
 
@@ -393,6 +394,3 @@ if __name__ == "__main__":
         asyncio.run(run_settings(args))
     except KeyboardInterrupt:
         pass
-
-
-

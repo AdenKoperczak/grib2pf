@@ -2,3 +2,4 @@ pygrib
 numpy
 Pillow
 requests
+jsonc_parser
