@@ -279,13 +279,56 @@ End:
     def _log(self, *args, **kwargs):
         if self.verbose:
             t = time.strftime(TIME_FMT).format(format(round((time.time() % 1) * 1000), "0>3"))
-            print(t, *args, **kwargs)
+            print(t, f"[{self.title}]", *args, **kwargs)
+
 
 if __name__ == "__main__":
     import argparse
     import sys
     import json
     import os
+    import asyncio
+
+    async def run_setting(settings):
+        placefile = GRIBPlacefile(
+                settings.get("url", None),
+                settings.get("imageFile", None),
+                settings.get("placeFile", None),
+                settings.get("palette", None),
+                settings.get("title", "GRIB Placefile"),
+                settings.get("refresh", 60),
+                settings.get("imageURL", None),
+                settings.get("imageWidth", 1920),
+                settings.get("imageHeight", 1080),
+                settings.get("verbose", False),
+                settings.get("timeout", 30))
+
+        last = time.time()
+        placefile.pull_data()
+        placefile.generate_image()
+        placefile.generate_placefile()
+        placefile.forget_data()
+
+        if settings.get("regenerateTime", None) is not None:
+            while True:
+                now = time.time()
+                dt = settings["regenerateTime"] - (now - last)
+                if dt > 0:
+                    await asyncio.sleep(dt)
+
+                last = time.time()
+                placefile.pull_data()
+                placefile.generate_image()
+                placefile.generate_placefile()
+                placefile.forget_data()
+
+    async def run_settings(settings):
+        if isinstance(settings, dict):
+            await run_setting(settings)
+        elif isinstance(settings, list):
+            async with asyncio.TaskGroup() as tg:
+                for setting in settings:
+                    tg.create_task(run_setting(setting))
 
     location = os.path.split(__file__)[0]
 
@@ -346,37 +389,10 @@ if __name__ == "__main__":
     else:
         args = vars(p.parse_args())
 
-    placefile = GRIBPlacefile(
-            args.get("url", None),
-            args.get("imageFile", None),
-            args.get("placeFile", None),
-            args.get("palette", None),
-            args.get("title", "GRIB Placefile"),
-            args.get("refresh", 60),
-            args.get("imageURL", None),
-            args.get("imageWidth", 1920),
-            args.get("imageHeight", 1080),
-            args.get("verbose", False),
-            args.get("timeout", 30))
+    try:
+        asyncio.run(run_settings(args))
+    except KeyboardInterrupt:
+        pass
 
-    last = time.time()
-    placefile.pull_data()
-    placefile.generate_image()
-    placefile.generate_placefile()
-    placefile.forget_data()
 
-    if args.get("regenerateTime", None) is not None:
-        try:
-            while True:
-                now = time.time()
-                dt = args["regenerateTime"] - (now - last)
-                if dt > 0:
-                    time.sleep(dt)
 
-                last = time.time()
-                placefile.pull_data()
-                placefile.generate_image()
-                placefile.generate_placefile()
-                placefile.forget_data()
-        except KeyboardInterrupt:
-            pass
