@@ -1,0 +1,23 @@
+// Combine the placefiles in an array
+[
+    // This is the same as default.jsonc
+    {
+        "url": "https://mrms.ncep.noaa.gov/data/2D/MergedBaseReflectivity/MRMS_MergedBaseReflectivity.latest.grib2.gz",
+        "imageFile": "{intern_}/baseReflectivity.png",
+        "placeFile": "{intern_}/baseReflectivity.txt",
+        "verbose": true,
+        "refresh": 15,
+        "regenerateTime": 60
+    },
+    // This is the same as precipitation-flag.jsonc
+    {
+        "url": "https://mrms.ncep.noaa.gov/data/2D/PrecipFlag/MRMS_PrecipFlag.latest.grib2.gz",
+        "imageFile": "{intern_}/precip_flag.png",
+        "placeFile": "{intern_}/precip_flag.png",
+        "palette": "{intern_}/palettes/PF.pal",
+        "verbose": true,
+        "refresh": 10,
+        "regenerateTime": 60,
+        "title": "MRMS Precipitation Flag"
+    }
+]
