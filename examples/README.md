@@ -1,16 +1,16 @@
 # Example Settings Files
 
 ## Paths
-Paths in these examples may start with `{intern_}`. This should be replaced
-with the path to the `intern_` folder on Windows, or the source directory on
+Paths in these examples may start with `{_internal}`. This should be replaced
+with the path to the `_internal` folder on Windows, or the source directory on
 Linux. Placefile and image paths can be anything you like. Palette paths should
 point to a valid palette file. Another note is that sometimes Windows will
 remove extensions (`.jsonc`, `.txt`, `.png`, etc) when displaying names.
 
 ## Where are your settings
-Your settings should be at `{intern_}/settings.jsonc`. You can modify it to
+Your settings should be at `{_internal}/settings.jsonc`. You can modify it to
 be more like one of the examples, or do your own thing with it.
-`{intern_}/settings.json` is also a valid path, but should be moved to the
+`{_internal}/settings.json` is also a valid path, but should be moved to the
 former for proper highlighting in text editors. Note that `\` must be replaced
 by `\\` or `/` in any path.
 
