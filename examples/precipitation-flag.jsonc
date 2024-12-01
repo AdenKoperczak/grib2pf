@@ -1,10 +1,10 @@
 {
     // This uses a different URL from default.jsonc
     "url": "https://mrms.ncep.noaa.gov/data/2D/PrecipFlag/MRMS_PrecipFlag.latest.grib2.gz",
-    "imageFile": "{intern_}/precip_flag.png",
-    "placeFile": "{intern_}/precip_flag.png",
+    "imageFile": "{_internal}/precip_flag.png",
+    "placeFile": "{_internal}/precip_flag.txt",
     // Use the correct palette for precipitation flag.
-    "palette": "{intern_}/palettes/PF.pal",
+    "palette": "{_internal}/palettes/PF.pal",
     "verbose": true,
     "refresh": 10,
     "regenerateTime": 60,

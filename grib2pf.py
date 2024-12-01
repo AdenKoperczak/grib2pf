@@ -288,12 +288,17 @@ if __name__ == "__main__":
     import asyncio
     from jsonc_parser.parser import JsoncParser
 
+    location = os.path.split(__file__)[0]
+
+    def replace_location(text):
+        return text.replace("{_internal}", location)
+
     async def run_setting(settings):
         placefile = GRIBPlacefile(
                 settings.get("url", None),
-                settings.get("imageFile", None),
-                settings.get("placeFile", None),
-                settings.get("palette", None),
+                replace_location(settings.get("imageFile", None)),
+                replace_location(settings.get("placeFile", None)),
+                replace_location(settings.get("palette", None)),
                 settings.get("title", "GRIB Placefile"),
                 settings.get("refresh", 60),
                 settings.get("imageURL", None),
@@ -328,8 +333,6 @@ if __name__ == "__main__":
             async with asyncio.TaskGroup() as tg:
                 for setting in settings:
                     tg.create_task(run_setting(setting))
-
-    location = os.path.split(__file__)[0]
 
     def format_file(filename):
         return os.path.join(location, filename).replace("\\", "\\\\")

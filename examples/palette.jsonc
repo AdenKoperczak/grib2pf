@@ -1,7 +1,7 @@
 {
     "url": "https://mrms.ncep.noaa.gov/data/2D/MergedBaseReflectivity/MRMS_MergedBaseReflectivity.latest.grib2.gz",
-    "imageFile": "{intern_}/baseReflectivity.png",
-    "placeFile": "{intern_}/baseReflectivity.txt",
+    "imageFile": "{_internal}/baseReflectivity.png",
+    "placeFile": "{_internal}/baseReflectivity.txt",
     "verbose": true,
     "refresh": 15,
     "regenerateTime": 60,

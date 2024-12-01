@@ -1,5 +1,9 @@
 # Example Settings Files
 
+## Using an example file
+You should be able to simply copy any of these files into your `_internal`
+folder, and rename it to `settings.jsonc` to run it.
+
 ## Paths
 Paths in these examples may start with `{_internal}`. This should be replaced
 with the path to the `_internal` folder on Windows, or the source directory on
