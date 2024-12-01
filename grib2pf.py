@@ -291,7 +291,10 @@ if __name__ == "__main__":
     location = os.path.split(__file__)[0]
 
     def replace_location(text):
-        return text.replace("{_internal}", location)
+        if isinstance(text, str):
+            return text.replace("{_internal}", location)
+        else:
+            return text
 
     async def run_setting(settings):
         placefile = GRIBPlacefile(
