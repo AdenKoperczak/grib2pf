@@ -287,7 +287,7 @@ End:
             t = time.strftime(TIME_FMT).format(format(round((time.time() % 1) * 1000), "0>3"))
             print(t, f"[{self.title}]", *args, **kwargs)
 
-if __name__ == "__main__":
+def main():
     import argparse
     import sys
     import os
@@ -406,3 +406,10 @@ if __name__ == "__main__":
         asyncio.run(run_settings(args))
     except KeyboardInterrupt:
         pass
+
+if __name__ == "__main__":
+    try:
+        main()
+    except Exception as e:
+        print(e)
+        input("Press enter to exit")
