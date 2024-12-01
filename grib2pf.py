@@ -227,7 +227,7 @@ End:
             self._log("generate_placefile with no data")
             return
 
-        self._log("Generating placefile")
+        self._log(f"Generating placefile {self.placeFile}")
         if self.latT is None:
             lats, lons = self.grb.latlons()
             self._set_bounds(lats, lons)
