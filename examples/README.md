@@ -50,3 +50,7 @@ contains several objects, separated by commas.
   `precipitation-flag.jsonc` to generate both placefiles.
 - `to-host.jsonc` modifies the `default.jsonc` so the generated placefile can
   be hosted on a webserver.
+- `QPE_1h.jsonc` generates a radar based, 1 hour accumulation placefile.
+- `cc.jsonc` generates a correlation coefficient placefile.
+- `all.jsonc` generates base reflectivity, precipitation flag, 1 hour
+  accumulation, and correlation coefficient placefiles.
