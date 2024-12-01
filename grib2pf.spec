@@ -18,6 +18,7 @@ a = Analysis(
     excludes=[],
     noarchive=False,
     optimize=0,
+    icon="icon/icon.ico",
 )
 
 # exclude binaries
