@@ -1,0 +1,13 @@
+{
+    // Diffrent URL for 1 hour accumulation
+    "url": "https://mrms.ncep.noaa.gov/data/2D/RadarOnly_QPE_01H/MRMS_RadarOnly_QPE_01H.latest.grib2.gz",
+    "imageFile": "{_internal}/QPE_1h.png",
+    "placeFile": "{_internal}/QPE_1h.txt",
+    // Change the color palette/table to something usable for CC
+    "palette": "{_internal}/palettes/wct/OHP.pal",
+    "verbose": true,
+    "refresh": 15,
+    "regenerateTime": 60,
+    // Change title for this plot
+    "title": "MRMS QPE 1 Hour"
+}

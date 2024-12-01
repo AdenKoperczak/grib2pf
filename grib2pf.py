@@ -296,6 +296,22 @@ def main():
 
     location = os.path.split(__file__)[0]
 
+    def choose_file():
+        while True:
+            print("Type the number of the file you want to select, and press enter")
+            try:
+                path = os.path.join(location, "presets")
+                files = [file for file in os.listdir(path) if file.endswith(".jsonc")]
+                for i, file in enumerate(files):
+                    print(f"{i + 1}: {file}")
+                index = int(input("number: ")) - 1
+                return os.path.join(path, files[index])
+            except KeyboardInterrupt:
+                raise KeyboardInterrupt()
+            except:
+                print("invalid choice")
+
+
     def replace_location(text):
         if isinstance(text, str):
             return text.replace("{_internal}", location)
@@ -392,11 +408,10 @@ def main():
     if len(sys.argv) == 1:
         if os.path.exists(defaultSettingsPath2):
             args = JsoncParser.parse_file(defaultSettingsPath2)
-        else:
-            if not os.path.exists(defaultSettingsPath):
-                with open(defaultSettingsPath, "w") as file:
-                    file.write(defaultSettings)
+        elif os.path.exists(defaultSettingsPath):
             args = JsoncParser.parse_file(defaultSettingsPath)
+        else:
+            args = JsoncParser.parse_file(choose_file())
     elif len(sys.argv) == 2 and sys.argv[1] not in ("-h", "--help"):
         args = JsoncParser.parse_file(sys.argv[1])
     else:

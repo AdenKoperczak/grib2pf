@@ -1,0 +1,16 @@
+{
+    // The url to the MRMS reflectivity data
+    "url": "https://mrms.ncep.noaa.gov/data/2D/MergedBaseReflectivity/MRMS_MergedBaseReflectivity.latest.grib2.gz",
+    // The file locations of the image and placefile. These can be modified.
+    "imageFile": "{_internal}/baseReflectivity.png",
+    "placeFile": "{_internal}/baseReflectivity.txt",
+    // Print information to the console.
+    "verbose": true,
+    // Have Supercell Wx reload the data every 15 seconds. For local files,
+    // quick is fine.
+    "refresh": 15,
+    // Regenerate the image every 60 seconds. Check how often your MRMS data
+    // updates. I recommend about twice as often as that, although adjusting it
+    // is OK
+    "regenerateTime": 60
+}
