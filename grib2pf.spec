@@ -56,7 +56,11 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon=["icon\\icon.ico"],
+    icon=[
+        "icon\\icon16.ico",
+        "icon\\icon32.ico",
+        "icon\\icon512.ico"
+        ],
 )
 coll = COLLECT(
     exe,
