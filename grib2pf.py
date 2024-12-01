@@ -68,19 +68,16 @@ class Palette:
                         elif name == "step":
                             self.step = float(value)
                         elif name == "rf":
-                            try:
-                                self.rf = self._parse_color(value, False, False)
-                            except:
-                                self.rf = self._parse_color(value, True, False)
+                            self.rf = self._parse_color(value, "rf", False)
                         elif name == "color":
-                            self.values.append(self._parse_color(value, False, True))
+                            self.values.append(self._parse_color(value, "color", True))
                         elif name == "color4":
-                            self.values.append(self._parse_color(value, True, True))
+                            self.values.append(self._parse_color(value, "color4", True))
                         elif name == "solidcolor":
-                            color = self._parse_color(value, False, False)
+                            color = self._parse_color(value, "color", False)
                             self.values.append(color + color[1:])
                         elif name == "solidcolor4":
-                            color = self._parse_color(value, True, False)
+                            color = self._parse_color(value, "color4", False)
                             self.values.append(color + color[1:])
                         else:
                             raise Exception(f"Unknown name {repr(name)}")
@@ -89,15 +86,15 @@ class Palette:
                         raise e
         self.values = sorted(self.values, key = lambda a: a[0])
 
-    def _parse_color(self, text, alpha, optional):
+    def _parse_color(self, text, colorType, optional):
         parts = self.COMBINE_SPACES_REGEX.sub(" ", text).split(" ")
 
         try:
-            if alpha:
+            if colorType == "color4":
                 if len(parts) == 5 or (optional and len(parts) == 8):
                     parts = [float(parts[0])] + [int(part) for part in parts[1:]]
                     return tuple(parts)
-            else:
+            elif colorType == "color":
                 if len(parts) == 4:
                     parts = [float(parts[0])] + [int(part) for part in parts[1:]] + [255]
                     return tuple(parts)
@@ -105,8 +102,16 @@ class Palette:
                     parts = [float(parts[0])] + \
                             [int(part) for part in parts[1:4]] + [255] + \
                             [int(part) for part in parts[4:7]] + [255]
-        except:
-            raise Exception(f"Could not parse color {repr(text)}")
+                    return tuple(parts)
+            elif colorType == "rf":
+                parts = [int(part) for part in parts]
+                if len(parts) == 3:
+                    return tuple(parts + [255])
+                elif len(parts) == 4:
+                    return tuple(parts)
+
+        except Exception as e:
+            raise Exception(f"Could not parse color {repr(text)}: {e}")
 
         raise Exception(f"Could not parse color {repr(text)}")
 
@@ -117,10 +122,10 @@ class Palette:
             return (0, 0, 0, 0)
         elif v >= self.values[-1][0]:
             value = self.values[-1]
-            if len(value) == 4:
-                return value[1:]
-            else:
-                return value[5:]
+            if len(value) == 5:
+                return tuple(value[1:])
+            elif len(value) == 9:
+                return tuple(value[5:])
         for i, upper in enumerate(self.values[1:]):
             if upper[0] > v:
                 lower = self.values[i]
@@ -134,6 +139,7 @@ class Palette:
                     upperC = upper[1:5]
 
                 return tuple(int(pos * (upperC[j] - lowerC[j]) + lowerC[j]) for j in range(0, 4))
+        raise Exception(f"Did not generate color from color table. This should be unreachable. value = {v} {self.values=}")
 
 def normalize(data):
     return (data  - data.min()) / (data.max() - data.min())
