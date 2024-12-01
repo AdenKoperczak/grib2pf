@@ -123,7 +123,7 @@ jobs:
         cd ${{ github.workspace }}/source
         pip install pyinstaller
         pip install -r requirements.txt
-        pyinstaller grib2pf.spec
+        pyinstaller grib2pf.spec --icon icon/icon.ico
 
     - name: Copy Files to Output
       shell: pwsh
