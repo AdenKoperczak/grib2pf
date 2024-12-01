@@ -18,7 +18,6 @@ a = Analysis(
     excludes=[],
     noarchive=False,
     optimize=0,
-    icon="icon/icon.ico",
 )
 
 # exclude binaries
@@ -57,6 +56,7 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
+    icon="icon/icon.ico",
 )
 coll = COLLECT(
     exe,
