@@ -125,6 +125,16 @@ jobs:
         pip install -r requirements.txt
         pyinstaller grib2pf.spec
 
+    - name: Copy Files to Output
+      shell: pwsh
+      run: |
+        cd ${{ github.workspace }}/source
+        Copy-Item README.md dist/grib2pf/
+        Copy-Item ACKNOWLEDGMENTS.md dist/grib2pf/
+        Copy-Item examples dist/grib2pf/examples -Recurse
+        Copy-Item palettes dist/grib2pf/_internal/palettes -Recurse
+
+
     - name: Upload grib2pf Executable
       uses: actions/upload-artifact@v4
       with:

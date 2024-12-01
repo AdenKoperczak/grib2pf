@@ -68,20 +68,17 @@ class Palette:
                         elif name == "step":
                             self.step = float(value)
                         elif name == "rf":
-                            try:
-                                self.rf = self._parse_color(value, False, False)
-                            except:
-                                self.rf = self._parse_color(value, True, False)
+                            self.rf = self._parse_color(value, "rf", False)
                         elif name == "color":
-                            self.values.append(self._parse_color(value, False, True))
+                            self.values.append(self._parse_color(value, "color", True))
                         elif name == "color4":
-                            self.values.append(self._parse_color(value, True, True))
+                            self.values.append(self._parse_color(value, "color4", True))
                         elif name == "solidcolor":
-                            color = self._parse_color(value, False, False)
-                            self.values.append(color, color[1:])
+                            color = self._parse_color(value, "color", False)
+                            self.values.append(color + color[1:])
                         elif name == "solidcolor4":
-                            color = self._parse_color(value, True, False)
-                            self.values.append(color, color[1:])
+                            color = self._parse_color(value, "color4", False)
+                            self.values.append(color + color[1:])
                         else:
                             raise Exception(f"Unknown name {repr(name)}")
                     except Exception as e:
@@ -89,15 +86,15 @@ class Palette:
                         raise e
         self.values = sorted(self.values, key = lambda a: a[0])
 
-    def _parse_color(self, text, alpha, optional):
+    def _parse_color(self, text, colorType, optional):
         parts = self.COMBINE_SPACES_REGEX.sub(" ", text).split(" ")
 
         try:
-            if alpha:
+            if colorType == "color4":
                 if len(parts) == 5 or (optional and len(parts) == 8):
                     parts = [float(parts[0])] + [int(part) for part in parts[1:]]
                     return tuple(parts)
-            else:
+            elif colorType == "color":
                 if len(parts) == 4:
                     parts = [float(parts[0])] + [int(part) for part in parts[1:]] + [255]
                     return tuple(parts)
@@ -105,8 +102,16 @@ class Palette:
                     parts = [float(parts[0])] + \
                             [int(part) for part in parts[1:4]] + [255] + \
                             [int(part) for part in parts[4:7]] + [255]
-        except:
-            raise Exception(f"Could not parse color {repr(text)}")
+                    return tuple(parts)
+            elif colorType == "rf":
+                parts = [int(part) for part in parts]
+                if len(parts) == 3:
+                    return tuple(parts + [255])
+                elif len(parts) == 4:
+                    return tuple(parts)
+
+        except Exception as e:
+            raise Exception(f"Could not parse color {repr(text)}: {e}")
 
         raise Exception(f"Could not parse color {repr(text)}")
 
@@ -117,10 +122,10 @@ class Palette:
             return (0, 0, 0, 0)
         elif v >= self.values[-1][0]:
             value = self.values[-1]
-            if len(value) == 4:
-                return value[1:]
-            else:
-                return value[5:]
+            if len(value) == 5:
+                return tuple(value[1:])
+            elif len(value) == 9:
+                return tuple(value[5:])
         for i, upper in enumerate(self.values[1:]):
             if upper[0] > v:
                 lower = self.values[i]
@@ -134,6 +139,7 @@ class Palette:
                     upperC = upper[1:5]
 
                 return tuple(int(pos * (upperC[j] - lowerC[j]) + lowerC[j]) for j in range(0, 4))
+        raise Exception(f"Did not generate color from color table. This should be unreachable. value = {v} {self.values=}")
 
 def normalize(data):
     return (data  - data.min()) / (data.max() - data.min())
@@ -279,15 +285,63 @@ End:
     def _log(self, *args, **kwargs):
         if self.verbose:
             t = time.strftime(TIME_FMT).format(format(round((time.time() % 1) * 1000), "0>3"))
-            print(t, *args, **kwargs)
+            print(t, f"[{self.title}]", *args, **kwargs)
 
 if __name__ == "__main__":
     import argparse
     import sys
-    import json
     import os
+    import asyncio
+    from jsonc_parser.parser import JsoncParser
 
     location = os.path.split(__file__)[0]
+
+    def replace_location(text):
+        if isinstance(text, str):
+            return text.replace("{_internal}", location)
+        else:
+            return text
+
+    async def run_setting(settings):
+        placefile = GRIBPlacefile(
+                settings.get("url", None),
+                replace_location(settings.get("imageFile", None)),
+                replace_location(settings.get("placeFile", None)),
+                replace_location(settings.get("palette", None)),
+                settings.get("title", "GRIB Placefile"),
+                settings.get("refresh", 60),
+                settings.get("imageURL", None),
+                settings.get("imageWidth", 1920),
+                settings.get("imageHeight", 1080),
+                settings.get("verbose", False),
+                settings.get("timeout", 30))
+
+        last = time.time()
+        placefile.pull_data()
+        placefile.generate_image()
+        placefile.generate_placefile()
+        placefile.forget_data()
+
+        if settings.get("regenerateTime", None) is not None:
+            while True:
+                now = time.time()
+                dt = settings["regenerateTime"] - (now - last)
+                if dt > 0:
+                    await asyncio.sleep(dt)
+
+                last = time.time()
+                placefile.pull_data()
+                placefile.generate_image()
+                placefile.generate_placefile()
+                placefile.forget_data()
+
+    async def run_settings(settings):
+        if isinstance(settings, dict):
+            await run_setting(settings)
+        elif isinstance(settings, list):
+            async with asyncio.TaskGroup() as tg:
+                for setting in settings:
+                    tg.create_task(run_setting(setting))
 
     def format_file(filename):
         return os.path.join(location, filename).replace("\\", "\\\\")
@@ -302,7 +356,8 @@ if __name__ == "__main__":
     "regenerateTime": 60
 }}
     """.strip()
-    defaultSettingsPath = os.path.join(location, "settings.json")
+    defaultSettingsPath  = os.path.join(location, "settings.jsonc")
+    defaultSettingsPath2 = os.path.join(location, "settings.json")
 
     p = argparse.ArgumentParser(
             prog = "grib2pf",
@@ -335,48 +390,19 @@ if __name__ == "__main__":
                    help = "How long to wait for a responce from the URL in seconds. Defaults to 30s. No way to disable, because that will lock up the program")
 
     if len(sys.argv) == 1:
-        if not os.path.exists(defaultSettingsPath):
-            with open(defaultSettingsPath, "w") as file:
-                file.write(defaultSettings)
-        with open(defaultSettingsPath) as file:
-            args = json.load(file)
+        if os.path.exists(defaultSettingsPath2):
+            args = JsoncParser.parse_file(defaultSettingsPath2)
+        else:
+            if not os.path.exists(defaultSettingsPath):
+                with open(defaultSettingsPath, "w") as file:
+                    file.write(defaultSettings)
+            args = JsoncParser.parse_file(defaultSettingsPath)
     elif len(sys.argv) == 2 and sys.argv[1] not in ("-h", "--help"):
-        with open(sys.argv[1]) as file:
-            args = json.load(file)
+        args = JsoncParser.parse_file(sys.argv[1])
     else:
         args = vars(p.parse_args())
 
-    placefile = GRIBPlacefile(
-            args.get("url", None),
-            args.get("imageFile", None),
-            args.get("placeFile", None),
-            args.get("palette", None),
-            args.get("title", "GRIB Placefile"),
-            args.get("refresh", 60),
-            args.get("imageURL", None),
-            args.get("imageWidth", 1920),
-            args.get("imageHeight", 1080),
-            args.get("verbose", False),
-            args.get("timeout", 30))
-
-    last = time.time()
-    placefile.pull_data()
-    placefile.generate_image()
-    placefile.generate_placefile()
-    placefile.forget_data()
-
-    if args.get("regenerateTime", None) is not None:
-        try:
-            while True:
-                now = time.time()
-                dt = args["regenerateTime"] - (now - last)
-                if dt > 0:
-                    time.sleep(dt)
-
-                last = time.time()
-                placefile.pull_data()
-                placefile.generate_image()
-                placefile.generate_placefile()
-                placefile.forget_data()
-        except KeyboardInterrupt:
-            pass
+    try:
+        asyncio.run(run_settings(args))
+    except KeyboardInterrupt:
+        pass

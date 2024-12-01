@@ -1,0 +1,12 @@
+{
+    "url": "https://mrms.ncep.noaa.gov/data/2D/MergedBaseReflectivity/MRMS_MergedBaseReflectivity.latest.grib2.gz",
+    "imageFile": "{_internal}/baseReflectivity.png",
+    "placeFile": "{_internal}/baseReflectivity.txt",
+    "verbose": true,
+    "refresh": 15,
+    "regenerateTime": 60,
+    // The path to your palette file. This is useful if you have a custom
+    // palette you use for reflectivity data, or if you want to plot other
+    // products.
+    "palette": "{path_to_palette}"
+}

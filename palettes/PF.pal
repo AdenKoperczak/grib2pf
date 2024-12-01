@@ -1,0 +1,18 @@
+; -3/<0 no coverage (value used depends on file format. MRMS binary vs. GRIB2)
+; 0 no precipitation
+
+SolidColor4:  1   0   0 255 120 ; warm stratiform rain
+SolidColor4:  3 255 255 255 120 ; snow
+SolidColor4:  6   0   0 255 120 ; convection
+SolidColor4:  7 255   0   0 120 ; hail
+SolidColor4: 10   0   0 255 120 ; cool stratiform rain
+SolidColor4: 91   0   0 255 120 ; tropical stratiform rain
+SolidColor4: 96   0   0 255 120 ; tropical convective rain
+
+; Here to ensure if invalid values are sent, they are not incorrectly rendered
+SolidColor4:  2   0   0   0   0 ; Invalid
+SolidColor4:  4   0   0   0   0 ; Invalid
+SolidColor4:  8   0   0   0   0 ; Invalid
+SolidColor4: 11   0   0   0   0 ; Invalid
+SolidColor4: 92   0   0   0   0 ; Invalid
+SolidColor4: 97   0   0   0   0 ; Invalid

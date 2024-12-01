@@ -16,6 +16,7 @@ of this project.
 | [numpy](https://numpy.org) | [BSD 3 Clause](https://spdx.org/licenses/BSD-3-Clause.html) | 
 | [Pillow](https://python-pillow.org/) | [MIT-CMU License](https://spdx.org/licenses/MIT-CMU.html) |
 | [requests](https://docs.python-requests.org/) | [Apache-2.0 License](https://spdx.org/licenses/Apache-2.0.html) |
+| [jsonc-parser](https://github.com/NickolaiBeloguzov/jsonc-parser) | [MIT License](https://spdx.org/licenses/MIT.html) |
 | [Python 3.11](https://python.org/) | [PFS License](https://docs.python.org/3.11/license.html#psf-license) |
 | [certifi](https://github.com/certifi/python-certifi) | [MPL v. 2.0](http://mozilla.org/MPL/2.0/) |
 | [charset-normalizer](https://github.com/jawah/charset_normalizer) | [MIT License](https://spdx.org/licenses/MIT.html) |
@@ -48,3 +49,5 @@ grib2pf uses assets from the following sources:
 | Source | License | Notes |
 | ------ | ------- | ----- |
 | [NOAA's Weather and Climate Toolkit](https://www.ncdc.noaa.gov/wct/) | Public Domain | Default Color Table |
+| [Supercell Wx](https://github.com/dpaulat/supercell-wx) | [MIT License](https://spdx.org/licenses/MIT.html) | Converted Color Tables |
+| [Flaticon](https://www.flaticon.com/) | [Flaticon License](https://www.freepikcompany.com/legal#nav-flaticon-agreement) | [Art and design icons created by Anditii Creative - Flaticon](https://www.flaticon.com/free-icons/art-and-design) As basis of icon|

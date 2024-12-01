@@ -1,0 +1,12 @@
+{
+    "url": "https://mrms.ncep.noaa.gov/data/2D/MergedBaseReflectivity/MRMS_MergedBaseReflectivity.latest.grib2.gz",
+    // Move the image and placefile a location served by your webserver.
+    "imageFile": "{webserverPath}/baseReflectivity.png",
+    "placeFile": "{webserverPath}/baseReflectivity.txt",
+    "verbose": true,
+    "refresh": 15,
+    "regenerateTime": 60,
+    // Set the URL used for the image in the placefile to the URL accessible
+    // from the internet.
+    "imageURL": "{imageURL}"
+}
