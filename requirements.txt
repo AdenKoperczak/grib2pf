@@ -3,3 +3,4 @@ numpy
 Pillow
 requests
 jsonc_parser
+boto3

@@ -7,6 +7,7 @@ import requests
 import gzip
 import time
 import re
+from aws import AWSHandler
 
 TIME_FMT = "[%Y-%m-%d %H:%M:%S.{}]"
 
@@ -194,10 +195,12 @@ End:
         self.lonL = None
         self.lonR = None
 
-    def pull_data(self):
+    def pull_data(self, url = None):
+        if url is None:
+            url = self.url
         try:
             self._log("Pulling data")
-            res = requests.get(self.url, timeout = self.timeout)
+            res = requests.get(url, timeout = self.timeout)
             self.grb = pygrib.fromstring(gzip.decompress(res.content))
             self._log("Data pulled")
         except Exception as e:
@@ -331,6 +334,20 @@ def main():
                 settings.get("imageHeight", 1080),
                 settings.get("verbose", False),
                 settings.get("timeout", 30))
+
+        if settings.get("aws", False):
+            awsHandler = AWSHandler(settings["product"])
+
+            while True:
+                if awsHandler.update_key():
+                    placefile.pull_data(awsHandler.get_url())
+                    placefile.generate_image()
+                    placefile.generate_placefile()
+                    placefile.forget_data()
+                await asyncio.sleep(settings.get("pullPeriod", 10))
+            return
+
+
 
         last = time.time()
         placefile.pull_data()
