@@ -399,6 +399,7 @@ class FilePicker(QWidget):
         self.mainLayout.setStretch(2, 1)
         self.mainLayout.setStretch(3, 1)
         self.mainLayout.setStretch(4, 1)
+        self.mainLayout.setStretch(5, 1)
 
         self.file_check_pressed()
 

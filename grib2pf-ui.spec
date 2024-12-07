@@ -1,11 +1,9 @@
 # -*- mode: python ; coding: utf-8 -*-
 
 a = Analysis(
-    ['grib2pf.py'],
+    ['grib2pf-ui.py'],
     pathex=[],
     binaries=[
-        ('D:\\a\\grib2pf\\grib2pf\\eccodes-install\\bin\\eccodes.dll', '.'),
-        ('D:\\a\\grib2pf\\grib2pf\\eccodes-install\\bin\\eccodes_memfs.dll', '.')
     ],
     datas=[
         ( "README.md", '.' ),
@@ -45,7 +43,7 @@ exe = EXE(
     a.scripts,
     [],
     exclude_binaries=True,
-    name='grib2pf',
+    name='grib2pf-ui',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
