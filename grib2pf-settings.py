@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 from PySide6.QtWidgets import QApplication, QLabel, QWidget, QGridLayout, \
         QLineEdit, QCheckBox, QSpinBox, QHBoxLayout, QVBoxLayout, QToolButton, \
         QPushButton, QFileDialog, QTableView, QMessageBox, QInputDialog
