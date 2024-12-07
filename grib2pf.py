@@ -7,6 +7,9 @@ import requests
 import gzip
 import time
 import re
+import asyncio
+import os
+
 from aws import AWSHandler
 
 TIME_FMT = "[%Y-%m-%d %H:%M:%S.{}]"
@@ -290,14 +293,74 @@ End:
             t = time.strftime(TIME_FMT).format(format(round((time.time() % 1) * 1000), "0>3"))
             print(t, f"[{self.title}]", *args, **kwargs)
 
+location = os.path.split(__file__)[0]
+
+def replace_location(text):
+    if isinstance(text, str):
+        return text.replace("{_internal}", location)
+    else:
+        return text
+
+async def run_setting(settings):
+    placefile = GRIBPlacefile(
+            settings.get("url", None),
+            replace_location(settings.get("imageFile", None)),
+            replace_location(settings.get("placeFile", None)),
+            replace_location(settings.get("palette", None)),
+            settings.get("title", "GRIB Placefile"),
+            settings.get("refresh", 60),
+            settings.get("imageURL", None),
+            settings.get("imageWidth", 1920),
+            settings.get("imageHeight", 1080),
+            settings.get("verbose", False),
+            settings.get("timeout", 30))
+
+    if settings.get("aws", False):
+        awsHandler = AWSHandler(settings["product"])
+
+        while True:
+            if awsHandler.update_key():
+                placefile.pull_data(awsHandler.get_url())
+                placefile.generate_image()
+                placefile.generate_placefile()
+                placefile.forget_data()
+            await asyncio.sleep(settings.get("pullPeriod", 10))
+        return
+
+
+
+    last = time.time()
+    placefile.pull_data()
+    placefile.generate_image()
+    placefile.generate_placefile()
+    placefile.forget_data()
+
+    if settings.get("regenerateTime", None) is not None:
+        while True:
+            now = time.time()
+            dt = settings["regenerateTime"] - (now - last)
+            if dt > 0:
+                await asyncio.sleep(dt)
+
+            last = time.time()
+            placefile.pull_data()
+            placefile.generate_image()
+            placefile.generate_placefile()
+            placefile.forget_data()
+
+async def run_settings(settings):
+    if isinstance(settings, dict):
+        await run_setting(settings)
+    elif isinstance(settings, list):
+        async with asyncio.TaskGroup() as tg:
+            for setting in settings:
+                tg.create_task(run_setting(setting))
+
 def main():
     import argparse
     import sys
-    import os
-    import asyncio
     from jsonc_parser.parser import JsoncParser
 
-    location = os.path.split(__file__)[0]
 
     def choose_file():
         while True:
@@ -315,66 +378,6 @@ def main():
                 print("invalid choice")
 
 
-    def replace_location(text):
-        if isinstance(text, str):
-            return text.replace("{_internal}", location)
-        else:
-            return text
-
-    async def run_setting(settings):
-        placefile = GRIBPlacefile(
-                settings.get("url", None),
-                replace_location(settings.get("imageFile", None)),
-                replace_location(settings.get("placeFile", None)),
-                replace_location(settings.get("palette", None)),
-                settings.get("title", "GRIB Placefile"),
-                settings.get("refresh", 60),
-                settings.get("imageURL", None),
-                settings.get("imageWidth", 1920),
-                settings.get("imageHeight", 1080),
-                settings.get("verbose", False),
-                settings.get("timeout", 30))
-
-        if settings.get("aws", False):
-            awsHandler = AWSHandler(settings["product"])
-
-            while True:
-                if awsHandler.update_key():
-                    placefile.pull_data(awsHandler.get_url())
-                    placefile.generate_image()
-                    placefile.generate_placefile()
-                    placefile.forget_data()
-                await asyncio.sleep(settings.get("pullPeriod", 10))
-            return
-
-
-
-        last = time.time()
-        placefile.pull_data()
-        placefile.generate_image()
-        placefile.generate_placefile()
-        placefile.forget_data()
-
-        if settings.get("regenerateTime", None) is not None:
-            while True:
-                now = time.time()
-                dt = settings["regenerateTime"] - (now - last)
-                if dt > 0:
-                    await asyncio.sleep(dt)
-
-                last = time.time()
-                placefile.pull_data()
-                placefile.generate_image()
-                placefile.generate_placefile()
-                placefile.forget_data()
-
-    async def run_settings(settings):
-        if isinstance(settings, dict):
-            await run_setting(settings)
-        elif isinstance(settings, list):
-            async with asyncio.TaskGroup() as tg:
-                for setting in settings:
-                    tg.create_task(run_setting(setting))
 
     def format_file(filename):
         return os.path.join(location, filename).replace("\\", "\\\\")
@@ -396,31 +399,8 @@ def main():
             prog = "grib2pf",
             description = "Generate an GRIB placefile for use with Supercell-WX",
             fromfile_prefix_chars = "@")
-    p.add_argument("url", type = str,
-                   help = """The URL to pull from. Should probably come from "https://mrms.ncep.noaa.gov/data"
-                   "https://mrms.ncep.noaa.gov/data/2D/MergedBaseReflectivity/MRMS_MergedBaseReflectivity.latest.grib2.gz" is a useful reflectivity plot""")
-    p.add_argument("imageFile", type = str,
-                   help = "The file name were the image should be written. Should be an absolute path to a png.")
-    p.add_argument("placeFile", type = str,
-                   help = "The file name were the placefile should be written")
-    p.add_argument("--palette", "-p", type = str, default = None,
-                   help = "The path to a GRS color table to use for this plot")
-    p.add_argument("--title", "-t", type = str, default = "GRIB Placefile",
-                   help = "The title to display in Supercell-WX")
-    p.add_argument("--refresh", "-r", type = int, default = 60,
-                   help = "How often Supercell-WX should refresh the placefile, in seconds")
-    p.add_argument("--imageURL", "-i", type = str, default = None,
-                   help = "The URL at which the image will be hosted, Unnecessary for local usage only")
-    p.add_argument("--imageWidth", "-W", type = int, default = 1920,
-                   help = "The width of the image to be generated. Only effects the resolution on the plot")
-    p.add_argument("--imageHeight", "-H", type = int, default = 1080,
-                   help = "The height of the image to be generated. Only effects the resolution on the plot")
-    p.add_argument("--regenerateTime", "-T", type = int, default = None,
-                   help = "How often to regenerate the image and placefile in seconds. Defaults to not regenerating")
-    p.add_argument("--verbose", "-v", action = "store_true", default = False,
-                   help = "Print status messages")
-    p.add_argument("--timeout", "-O", type = int, default = 30,
-                   help = "How long to wait for a responce from the URL in seconds. Defaults to 30s. No way to disable, because that will lock up the program")
+    p.add_argument("--json", type = str,
+                   help = """JSON representing your settings""")
 
     if len(sys.argv) == 1:
         if os.path.exists(defaultSettingsPath2):
@@ -429,10 +409,12 @@ def main():
             args = JsoncParser.parse_file(defaultSettingsPath)
         else:
             args = JsoncParser.parse_file(choose_file())
+    elif len(sys.argv) == 3 and sys.argv[1] == "--json":
+        args = JsoncParser.parse_str(sys.argv[2])
     elif len(sys.argv) == 2 and sys.argv[1] not in ("-h", "--help"):
         args = JsoncParser.parse_file(sys.argv[1])
     else:
-        args = vars(p.parse_args())
+        raise Exception("Invalid Arguments")
 
     try:
         asyncio.run(run_settings(args))
@@ -444,4 +426,6 @@ if __name__ == "__main__":
         main()
     except Exception as e:
         print(e)
+        if "exceptions" in dir(e):
+            print(e.exceptions)
         input("Press enter to exit")

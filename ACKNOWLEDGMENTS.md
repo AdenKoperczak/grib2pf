@@ -30,7 +30,8 @@ of this project.
 | [zlib](https://zlib.net/) | [Zlib](https://spdx.org/licenses/Zlib.html) |
 | [libexpat](https://libexpat.github.io/) | [MIT License](https://spdx.org/licenses/MIT.html) |
 | [liblzma](https://tukaani.org/xz/) | [0BSD](https://spdx.org/licenses/0BSD.html) |
-
+| [PySide6](https://doc.qt.io/qtforpython-6/) | [LGPL-3.0-only](https://spdx.org/licenses/LGPL-3.0-only.html) |
+| [boto3](https://github.com/boto/boto3) | [Apache-2.0 License](https://spdx.org/licenses/Apache-2.0.html) |
 Source
 ------
 

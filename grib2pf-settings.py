@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 from PySide6.QtWidgets import QApplication, QLabel, QWidget, QGridLayout, \
         QLineEdit, QCheckBox, QSpinBox, QHBoxLayout, QVBoxLayout, QToolButton, \
-        QPushButton, QFileDialog, QTableView, QMessageBox, QInputDialog
+        QPushButton, QFileDialog, QTableView, QMessageBox, QInputDialog, \
+        QComboBox, QDialog, QTreeView
 from PySide6.QtCore import Qt, Signal, QModelIndex, QAbstractTableModel, \
-        QMimeData
-from PySide6.QtGui import QKeySequence, QClipboard, QIcon
+        QMimeData, QSortFilterProxyModel, QThread
+from PySide6.QtGui import QKeySequence, QClipboard, QIcon, QStandardItemModel, \
+        QStandardItem
 
 from jsonc_parser.parser import JsoncParser
 import json
@@ -12,10 +14,137 @@ import json
 import sys
 import os
 import random
+import subprocess
 
 location = os.path.split(__file__)[0]
 
 MIME_TYPE = "application/x.grib2pf-placefile"
+
+class ProductsDialog(QDialog):
+    def __init__(self):
+        QDialog.__init__(self)
+
+        self.selectedProduct = ""
+
+        self.products = {}
+        with open(os.path.join(location, "products.txt")) as file:
+            for line in file.readlines():
+                line = line.strip()
+                loc, _, product = line.partition("/")
+                self.products.setdefault(loc, dict())[product[:-1]] = line
+
+        self.mainLayout = QVBoxLayout(self)
+        self.bottomLayout = QHBoxLayout()
+
+        self.model = QStandardItemModel()
+        self.proxyModel = QSortFilterProxyModel()
+
+        self.proxyModel.setSourceModel(self.model)
+        self.proxyModel.setFilterCaseSensitivity(Qt.CaseInsensitive)
+        self.proxyModel.setFilterKeyColumn(1)
+        self.proxyModel.setSortCaseSensitivity(Qt.CaseInsensitive)
+
+        self.infoBox          = QLabel()
+        self.locationComboBox = QComboBox()
+        self.mainView         = QTreeView()
+        self.searchBar        = QLineEdit()
+        self.selectButton     = QPushButton("Select")
+        self.cancelButton     = QPushButton("Cancel")
+
+        self.locationComboBox.currentTextChanged.connect(self.location_selected)
+        self.selectButton.clicked.connect(self.select_pressed)
+        self.cancelButton.clicked.connect(self.reject)
+        self.searchBar.textChanged.connect(self.update_search)
+
+        self.infoBox.setTextFormat(Qt.RichText)
+        self.infoBox.setOpenExternalLinks(True)
+        self.infoBox.setText("""
+        <table>
+            <tr>
+                <td>MRMS Table</td>
+                <td><a href="https://www.nssl.noaa.gov/projects/mrms/operational/tables.php">https://www.nssl.noaa.gov/projects/mrms/operational/tables.php</a></td>
+            </tr>
+        </table>
+        """)
+
+        self.mainView.setModel(self.proxyModel)
+        self.mainView.setSortingEnabled(True)
+        self.mainView.sortByColumn(0, Qt.AscendingOrder)
+
+        self.mainLayout.addWidget(self.infoBox)
+        self.mainLayout.addWidget(self.locationComboBox)
+        self.mainLayout.addWidget(self.mainView)
+
+        self.bottomLayout.addWidget(self.searchBar)
+        self.bottomLayout.addWidget(self.selectButton)
+        self.bottomLayout.addWidget(self.cancelButton)
+
+        self.mainLayout.addLayout(self.bottomLayout)
+
+        for loc in self.products.keys():
+            self.locationComboBox.addItem(loc)
+        self.locationComboBox.setCurrentText("CONUS")
+
+        self.setMinimumWidth(600)
+        self.setMinimumHeight(600)
+        self.setSizeGripEnabled(True)
+
+    def update_search(self, *args):
+        self.proxyModel.setFilterWildcard(self.searchBar.text())
+
+    def select_pressed(self, *args):
+        indexes = self.mainView.selectedIndexes()
+        if len(indexes) == 0:
+            self.reject()
+            return
+
+        index = self.proxyModel.mapToSource(indexes[0])
+
+        self.selectedProduct = self.model.item(index.row(), 1).text()
+        self.accept()
+
+    def location_selected(self, *args):
+        self.model.clear()
+        data = self.products.get(self.locationComboBox.currentText(), {})
+
+        root = self.model.invisibleRootItem()
+
+        for name, path in data.items():
+            root.appendRow([QStandardItem(name), QStandardItem(path)])
+
+        self.model.setHorizontalHeaderLabels(["Product Name", "Product Path"])
+        self.mainView.resizeColumnToContents(0)
+
+class ProductsSelect(QWidget):
+    def __init__(self):
+        QWidget.__init__(self)
+
+        self.mainLayout = QHBoxLayout(self)
+        self.mainLayout.setContentsMargins(0, 0, 0, 0)
+
+        self.display = QLineEdit()
+        self.dialog  = ProductsDialog()
+        self.dialogButton = QToolButton()
+
+        self.dialogButton.setText("...")
+        self.dialogButton.clicked.connect(self.run_dialog)
+
+        self.mainLayout.addWidget(self.display)
+        self.mainLayout.addWidget(self.dialogButton)
+
+        self.set_product("")
+
+    def set_product(self, text):
+        self.dialog.selectedProduct = text
+        self.display.setText(text)
+
+    def get_product(self):
+        return self.display.text()
+
+    def run_dialog(self, *args):
+        self.dialog.exec()
+        self.set_product(self.dialog.selectedProduct)
+
 
 class FileInput(QWidget):
     def __init__(self, *args, fileFilter, save, **kwargs):
@@ -58,6 +187,8 @@ class FileInput(QWidget):
 
 class PlacefileEditor(QWidget):
     DEFAULTS = {
+        "aws":                  True,
+        "product":              "",
         "url":                  "",
         "imageFile":            "{_internal}/image.png",
         "placeFile":            "{_internal}/placefile.txt",
@@ -70,6 +201,7 @@ class PlacefileEditor(QWidget):
         "verbose":              False,
         "timeout":              30,
         "regenerateTime":       60,
+        "pullPeriod":           10,
     }
 
     def _make_enabled_callback(self, widget, enabler):
@@ -85,6 +217,8 @@ class PlacefileEditor(QWidget):
         self.mainLayout = QGridLayout(self)
 
         self.dataWidgets = {
+            "aws":              QCheckBox(),
+            "product":          ProductsSelect(),
             "url":              QLineEdit(),
             "imageFile":        FileInput(fileFilter = "PNG File (*.png)", save = True),
             "placeFile":        FileInput(fileFilter = "Placefile (*)", save = True),
@@ -97,6 +231,7 @@ class PlacefileEditor(QWidget):
             "verbose":          QCheckBox(),
             "timeout":          QSpinBox(),
             "regenerateTime":   QSpinBox(),
+            "pullPeriod":       QSpinBox(),
         }
 
         self.dataWidgets["refresh"].setMinimum(15)
@@ -104,6 +239,9 @@ class PlacefileEditor(QWidget):
 
         self.dataWidgets["regenerateTime"].setMinimum(15)
         self.dataWidgets["regenerateTime"].setMaximum(3600 * 24 * 365)
+
+        self.dataWidgets["pullPeriod"].setMinimum(1)
+        self.dataWidgets["pullPeriod"].setMaximum(3600 * 24 * 365)
 
         self.dataWidgets["imageWidth"].setMinimum(100)
         self.dataWidgets["imageWidth"].setMaximum(2048)
@@ -114,15 +252,20 @@ class PlacefileEditor(QWidget):
         self.dataWidgets["timeout"].setMinimum(1)
         self.dataWidgets["timeout"].setMaximum(60)
 
+        self.dataWidgets["aws"].stateChanged.connect(self.aws_check_callback)
+
         self.enableWidgets = {}
 
         view = [
             ("Title", "title", False, "The title to be used in Supercell-Wx for this Placefile"),
+            ("AWS", "aws", False, "Pull from AWS instead of a URL. Recommended."),
+            ("Product", "product", False, "The product to pull from AWS."),
             ("URL", "url", False, "The URL to pull the GRIB/MRMS data from."),
             ("Image File", "imageFile", False, "The path to where the image (png) should be generated"),
             ("Place File", "placeFile", False, "The path to where the placefile should be generated"),
             ("Refresh (s)", "refresh", False, "How often Supercell-Wx should refresh the placefile. Often is OK for local files."),
-            ("Regeneration Period", "regenerateTime", True, "How often the placefile should be regenerated."),
+            ("Regeneration Period", "regenerateTime", False, "How often the placefile should be regenerated."),
+            ("Pull Period", "pullPeriod", False, "How often AWS should be pulled for new data."),
             ("Palette", "palette", True, "The path to a color-table to be used for this product."),
             ("Image URL", "imageURL", True, "Generally unneeded. The URL to the image file. Useful for hosting on a server"),
             ("Image Width", "imageWidth", True, "The width of the image in pixels"),
@@ -153,6 +296,18 @@ class PlacefileEditor(QWidget):
                 enabler.setToolTip(f"Enable {text}")
 
         self.mainLayout.setRowStretch(len(view), 1)
+        self.aws_check_callback()
+
+    AWS_ONLY = {"product", "pullPeriod"}
+    NOT_AWS_ONLY = {"url", "regenerateTime"}
+    def aws_check_callback(self, *args):
+        state = self.dataWidgets["aws"].isChecked()
+
+        for name in self.AWS_ONLY:
+            self.dataWidgets[name].setEnabled(state)
+
+        for name in self.NOT_AWS_ONLY:
+            self.dataWidgets[name].setEnabled(not state)
 
     def set_settings(self, settings):
         for name, widget in self.dataWidgets.items():
@@ -168,15 +323,22 @@ class PlacefileEditor(QWidget):
                 widget.setChecked(value)
             elif isinstance(widget, FileInput):
                 widget.set_text(value)
+            elif isinstance(widget, ProductsSelect):
+                widget.set_product(value)
 
             if name in self.enableWidgets:
                 self.enableWidgets[name].setChecked(enabled)
 
     def get_settings(self):
         settings = {}
+        awsState = self.dataWidgets["aws"].isChecked()
         for name, widget in self.dataWidgets.items():
             if name in self.enableWidgets and \
                not self.enableWidgets[name].isChecked():
+                continue
+            elif awsState and name in self.NOT_AWS_ONLY:
+                continue
+            elif not awsState and name in self.AWS_ONLY:
                 continue
             if isinstance(widget, QLineEdit):
                 settings[name] = widget.text()
@@ -186,11 +348,14 @@ class PlacefileEditor(QWidget):
                 settings[name] = widget.isChecked()
             elif isinstance(widget, FileInput):
                 settings[name] = widget.lineEdit.text()
+            elif isinstance(widget, ProductsSelect):
+                settings[name] = widget.get_product()
         return settings
 
 class FilePicker(QWidget):
     save_file_s = Signal(str, bool)
     open_file_s = Signal(str, bool)
+    run_s       = Signal()
 
     def __init__(self, *args, **kwargs):
         QWidget.__init__(self, *args, **kwargs)
@@ -204,11 +369,13 @@ class FilePicker(QWidget):
         self.saveButton   = QPushButton()
         self.saveAsButton = QPushButton()
         self.presetButton = QPushButton()
+        self.runButton    = QPushButton()
 
         self.openButton.setText("Open File")
         self.saveButton.setText("Save File")
         self.saveAsButton.setText("Save File As")
         self.presetButton.setText("Load Preset")
+        self.runButton.setText("Run")
 
         self.fileCheck.setToolTip("Enable editing non-default settings files. Not necessary for normal usage.")
 
@@ -217,12 +384,14 @@ class FilePicker(QWidget):
         self.saveButton.clicked.connect(self.save_button_pressed)
         self.saveAsButton.clicked.connect(self.save_as_button_pressed)
         self.presetButton.clicked.connect(self.preset_button_pressed)
+        self.runButton.clicked.connect(self.run_s.emit)
 
         self.mainLayout.addWidget(self.fileCheck)
         self.mainLayout.addWidget(self.openButton)
         self.mainLayout.addWidget(self.saveAsButton)
         self.mainLayout.addWidget(self.saveButton)
         self.mainLayout.addWidget(self.presetButton)
+        self.mainLayout.addWidget(self.runButton)
         #self.mainLayout.addStretch(1)
 
         self.mainLayout.setStretch(0, 0)
@@ -319,7 +488,7 @@ class PlacefileList(QAbstractTableModel):
     def save_file(self, fileName):
         self.loaded = json.dumps(self.placeFiles)
         with open(fileName, "w") as file:
-            file.write(self.loaded)
+            file.write(json.dumps(self.placeFiles, indent = 4))
 
     def rowCount(self, parent = QModelIndex()):
         return len(self.placeFiles)
@@ -456,7 +625,9 @@ class MainWindow(QWidget):
     def __init__(self, *args, **kwargs):
         QWidget.__init__(self, *args, **kwargs)
 
-        self.setWindowTitle("grib2pf Settings")
+        self.process = None
+
+        self.setWindowTitle("grib2pf UI")
         self.setWindowIcon(QIcon(os.path.join(location, "icons", "icon32.ico")))
 
         self.mainLayout     = QVBoxLayout(self)
@@ -526,6 +697,7 @@ class MainWindow(QWidget):
 
         self.filePicker.save_file_s.connect(self.save_file)
         self.filePicker.open_file_s.connect(self.load_file)
+        self.filePicker.run_s.connect(self.run_grib2pf)
         self.placefiles.selection_changed_s.connect(self.row_selected)
         self.addButton.clicked.connect(self.add_placefile)
         self.delButton.clicked.connect(self.del_placefile)
@@ -546,11 +718,12 @@ class MainWindow(QWidget):
         if conf:
             self.saveDialog.setText(f"Save To {fileName}")
             if self.saveDialog.exec() != QMessageBox.Save:
-                return
+                return False
 
         if self.placefilesModel.currentRow >= 0:
             self.placefilesModel.update_placefile(self.placefilesModel.currentRow, self.placefileEditor.get_settings())
         self.placefilesModel.save_file(fileName)
+        return True
 
     def load_file(self, fileName, updateLoaded = True):
         self.placefilesModel.currentRow = -1
@@ -558,6 +731,22 @@ class MainWindow(QWidget):
         if self.placefilesModel.rowCount() > 0:
             self.placefileEditor.set_settings(self.placefilesModel.get_placefile(0))
             self.placefilesModel.currentRow = 0
+
+    def run_grib2pf(self):
+        if self.process is not None:
+            self.process.kill()
+            self.process.wait()
+        if not self.save_file(self.filePicker.fileName, False):
+            return
+
+        path = location
+        parts = os.path.split(path)
+        if parts[1] == "_internal":
+            path = os.path.join(parts[0], "grib2pf.exe")
+        else:
+            path = os.path.join(path, "grib2pf.py")
+
+        self.process = subprocess.Popen([path, "--json", self.placefilesModel.loaded])
 
     def add_placefile(self):
         self.placefilesModel.add_placefile()
@@ -573,6 +762,9 @@ class MainWindow(QWidget):
         self.placefilesModel.del_placefile(self.placefilesModel.currentRow)
 
     def closeEvent(self, event):
+        if self.process is not None:
+            self.process.kill()
+
         if self.placefilesModel.currentRow >= 0:
             self.placefilesModel.update_placefile(self.placefilesModel.currentRow, self.placefileEditor.get_settings())
 
