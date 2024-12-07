@@ -1,7 +1,7 @@
 # -*- mode: python ; coding: utf-8 -*-
 
 a = Analysis(
-    ['grib2pf.py'],
+    ['grib2pf.py', 'grib2pf-ui.py'],
     pathex=[],
     binaries=[
         ('D:\\a\\grib2pf\\grib2pf\\eccodes-install\\bin\\eccodes.dll', '.'),

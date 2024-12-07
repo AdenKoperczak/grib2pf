@@ -117,12 +117,15 @@ jobs:
       with:
         path: ${{ github.workspace }}/source
 
-    - name: Make Executable
-      shell: pwsh
-      run: |
+    - name: Install pyinstaller and requirements.txt
         cd ${{ github.workspace }}/source
         pip install pyinstaller
         pip install -r requirements.txt
+
+    - name: Make Executables
+      shell: pwsh
+      run: |
+        cd ${{ github.workspace }}/source
         pyinstaller grib2pf.spec
 
     - name: Copy Files to Output
