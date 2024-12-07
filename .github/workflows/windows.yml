@@ -118,6 +118,8 @@ jobs:
         path: ${{ github.workspace }}/source
 
     - name: Install pyinstaller and requirements.txt
+      shell: pwsh
+      run: |
         cd ${{ github.workspace }}/source
         pip install pyinstaller
         pip install -r requirements.txt
