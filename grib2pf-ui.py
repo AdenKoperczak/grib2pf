@@ -274,7 +274,7 @@ class PlacefileEditor(QWidget):
             ("Image URL", "imageURL", True, "Generally unneeded. The URL to the image file. Useful for hosting on a server"),
             ("Image Width", "imageWidth", True, "The width of the image in pixels"),
             ("Image Height", "imageHeight", True, "The height of the image in pixels"),
-            ("Verbose", "verbose", True, "If grib2pf should 'print' out information"),
+            ("Verbose", "verbose", False, "If grib2pf should 'print' out information"),
             ("Timeout", "timeout", True, "The time grib2pf should wait for a response from the URL."),
         ]
 
