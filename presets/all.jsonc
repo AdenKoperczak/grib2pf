@@ -24,7 +24,6 @@
     {
         "aws": true,
         "product": "CONUS/RadarOnly_QPE_01H_00.00/",
-        "url": "https://mrms.ncep.noaa.gov/data/2D/RadarOnly_QPE_01H/MRMS_RadarOnly_QPE_01H.latest.grib2.gz",
         "imageFile": "{_internal}/QPE_1h.png",
         "placeFile": "{_internal}/QPE_1h.txt",
         "palette": "{_internal}/palettes/wct/OHP.pal",
