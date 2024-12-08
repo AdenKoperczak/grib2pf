@@ -2,22 +2,26 @@
 [
     // This is the same as default.jsonc
     {
-        "url": "https://mrms.ncep.noaa.gov/data/2D/MergedBaseReflectivity/MRMS_MergedBaseReflectivity.latest.grib2.gz",
+        "title": "MRMS Merged Base Reflectivity",
+        "aws": true,
+        "product": "CONUS/MergedBaseReflectivity_00.50/",
         "imageFile": "{_internal}/baseReflectivity.png",
         "placeFile": "{_internal}/baseReflectivity.txt",
         "verbose": true,
         "refresh": 15,
-        "regenerateTime": 60
+        "pullPeriod": 10
     },
     // This is the same as precipitation-flag.jsonc
     {
-        "url": "https://mrms.ncep.noaa.gov/data/2D/PrecipFlag/MRMS_PrecipFlag.latest.grib2.gz",
+        "aws": true,
+        "product": "CONUS/PrecipFlag_00.00/",
         "imageFile": "{_internal}/precip_flag.png",
         "placeFile": "{_internal}/precip_flag.txt",
         "palette": "{_internal}/palettes/PF.pal",
         "verbose": true,
         "refresh": 10,
         "regenerateTime": 60,
-        "title": "MRMS Precipitation Flag"
+        "title": "MRMS Precipitation Flag",
+        "pullPeriod": 10
     }
 ]

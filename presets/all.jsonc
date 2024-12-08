@@ -1,41 +1,48 @@
 [
     {
-        "url": "https://mrms.ncep.noaa.gov/data/2D/MergedBaseReflectivity/MRMS_MergedBaseReflectivity.latest.grib2.gz",
+        "title": "MRMS Merged Base Reflectivity",
+        "aws": true,
+        "product": "CONUS/MergedBaseReflectivity_00.50/",
         "imageFile": "{_internal}/baseReflectivity.png",
         "placeFile": "{_internal}/baseReflectivity.txt",
         "verbose": true,
         "refresh": 15,
-        "regenerateTime": 60,
-        "title": "MRMS Merged Base Reflectivity"
+        "pullPeriod": 10
     },
     {
-        "url": "https://mrms.ncep.noaa.gov/data/2D/PrecipFlag/MRMS_PrecipFlag.latest.grib2.gz",
+        "aws": true,
+        "product": "CONUS/PrecipFlag_00.00/",
         "imageFile": "{_internal}/precip_flag.png",
         "placeFile": "{_internal}/precip_flag.txt",
         "palette": "{_internal}/palettes/PF.pal",
         "verbose": true,
         "refresh": 10,
         "regenerateTime": 60,
-        "title": "MRMS Precipitation Flag"
+        "title": "MRMS Precipitation Flag",
+        "pullPeriod": 10
     },
     {
-        "url": "https://mrms.ncep.noaa.gov/data/2D/RadarOnly_QPE_01H/MRMS_RadarOnly_QPE_01H.latest.grib2.gz",
+        "aws": true,
+        "product": "CONUS/RadarOnly_QPE_01H_00.00/",
         "imageFile": "{_internal}/QPE_1h.png",
         "placeFile": "{_internal}/QPE_1h.txt",
         "palette": "{_internal}/palettes/wct/OHP.pal",
         "verbose": true,
         "refresh": 15,
         "regenerateTime": 60,
-        "title": "MRMS QPE 1 Hour"
+        "title": "MRMS QPE 1 Hour",
+        "pullPeriod": 10
     },
     {
-        "url": "https://mrms.ncep.noaa.gov/data/2D/MergedRhoHV/MRMS_MergedRhoHV.latest.grib2.gz",
+        "aws": true,
+        "product": "CONUS/MergedRhoHV_00.50/",
         "imageFile": "{_internal}/cc.png",
         "placeFile": "{_internal}/cc.txt",
         "palette": "{_internal}/palettes/wct/CC.pal",
         "verbose": true,
         "refresh": 15,
         "regenerateTime": 150,
-        "title": "MRMS Correlation Coefficient"
+        "title": "MRMS Correlation Coefficient",
+        "pullPeriod": 10
     }
 ]
