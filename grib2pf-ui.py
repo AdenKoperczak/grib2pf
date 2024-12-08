@@ -629,7 +629,7 @@ class MainWindow(QWidget):
         self.process = None
 
         self.setWindowTitle("grib2pf UI")
-        self.setWindowIcon(QIcon(os.path.join(location, "icons", "icon32.ico")))
+        self.setWindowIcon(QIcon(os.path.join(location, "icon", "icon32.ico")))
 
         self.mainLayout     = QVBoxLayout(self)
         self.workAreaLayout = QHBoxLayout()
