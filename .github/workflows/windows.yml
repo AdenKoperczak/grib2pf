@@ -140,6 +140,7 @@ jobs:
         Copy-Item examples dist/grib2pf/examples -Recurse
         Copy-Item palettes dist/grib2pf/_internal/palettes -Recurse
         Copy-Item presets dist/grib2pf/_internal/presets -Recurse
+        Copy-Item icons dist/grib2pf/_internal/icons -Recurse
 
 
     - name: Upload grib2pf Executable

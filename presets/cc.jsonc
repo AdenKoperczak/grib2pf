@@ -1,6 +1,7 @@
 {
-    // Diffrent URL for Correlation Coefficient
-    "url": "https://mrms.ncep.noaa.gov/data/2D/MergedRhoHV/MRMS_MergedRhoHV.latest.grib2.gz",
+    "aws": true,
+    // Diffrent Product for Correlation Coefficient
+    "url": "CONUS/MergedRhoHV_00.50/",
     "imageFile": "{_internal}/cc.png",
     "placeFile": "{_internal}/cc.txt",
     // Change the color palette/table to something usable for CC
@@ -10,5 +11,6 @@
     // Regenerate every 2.5 minutes
     "regenerateTime": 150,
     // Change title for this plot
-    "title": "MRMS Correlation Coefficient"
+    "title": "MRMS Correlation Coefficient",
+    "pullPeriod": 10
 }

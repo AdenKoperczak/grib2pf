@@ -1,5 +1,6 @@
 {
-    // Diffrent URL for 1 hour accumulation
+    "aws": true,
+    "product": "CONUS/RadarOnly_QPE_01H_00.00/",
     "url": "https://mrms.ncep.noaa.gov/data/2D/RadarOnly_QPE_01H/MRMS_RadarOnly_QPE_01H.latest.grib2.gz",
     "imageFile": "{_internal}/QPE_1h.png",
     "placeFile": "{_internal}/QPE_1h.txt",
@@ -9,5 +10,6 @@
     "refresh": 15,
     "regenerateTime": 60,
     // Change title for this plot
-    "title": "MRMS QPE 1 Hour"
+    "title": "MRMS QPE 1 Hour",
+    "pullPeriod": 10
 }
