@@ -110,7 +110,11 @@ class ProductsDialog(QDialog):
         root = self.model.invisibleRootItem()
 
         for name, path in data.items():
-            root.appendRow([QStandardItem(name), QStandardItem(path)])
+            name = QStandardItem(name)
+            path = QStandardItem(path)
+            name.setEditable(False)
+            path.setEditable(False)
+            root.appendRow([name, path])
 
         self.model.setHorizontalHeaderLabels(["Product Name", "Product Path"])
         self.mainView.resizeColumnToContents(0)
