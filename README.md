@@ -18,6 +18,13 @@ Download the executable form the latest release and extract it. You will want
 to extract it to a permanent location. This program does not install itself, so
 where you place it is where it will be installed.
 
+### Running the GUI
+`grib2pf-ui.exe` or `grib2pf-ui` can be run by double clicking it. This will
+launch a settings UI. You can select a preset to start with by clicking `Load
+Preset`. From there you can modify the settings to your liking. Clicking `Run`
+will save your settings and run `grib2pf`. Once your settings are saved, you
+can simply run `grib2pf` directly, without the GUI.
+
 ### Run It
 For a basic run, you can simply double click on `grib2pf.exe` or `grib2pf`.
 This will put a basic settings file (`settings.json`) in the `_internal` folder.
@@ -97,6 +104,12 @@ with `--help`. The arguments align with the settings described below.
 
 ## Settings
 Below are all the settings supported by this program.
+
+`aws`: Boolean describing if AWS data should be used
+
+`product`: AWS product to use
+
+`pullTime`: How often to pull AWS for new data
 
 `url`: The URL to pull from. Should probably come from
 "https://mrms.ncep.noaa.gov/data"
