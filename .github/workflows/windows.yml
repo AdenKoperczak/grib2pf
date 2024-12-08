@@ -136,6 +136,7 @@ jobs:
         cd ${{ github.workspace }}/source
         Copy-Item README.md dist/grib2pf/
         Copy-Item ACKNOWLEDGMENTS.md dist/grib2pf/
+        Copy-Item products.txt dist/grib2pf/_internal
         Copy-Item examples dist/grib2pf/examples -Recurse
         Copy-Item palettes dist/grib2pf/_internal/palettes -Recurse
         Copy-Item presets dist/grib2pf/_internal/presets -Recurse
