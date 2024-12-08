@@ -129,7 +129,6 @@ jobs:
       run: |
         cd ${{ github.workspace }}/source
         pyinstaller grib2pf.spec
-        pyinstaller grib2pf-ui.spec
 
     - name: Copy Files to Output
       shell: pwsh
