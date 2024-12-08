@@ -14,7 +14,7 @@ grib2pf_a = Analysis(
     datas=[
         ( "README.md", '.' ),
         ( "ACKNOWLEDGMENTS.md", "." ),
- i  ],
+    ],
     hiddenimports=['packaging', 'pyproj'],
     hookspath=[],
     hooksconfig={},
