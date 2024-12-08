@@ -36,7 +36,7 @@
     },
     {
         "aws": true,
-        "url": "CONUS/MergedRhoHV_00.50/",
+        "product": "CONUS/MergedRhoHV_00.50/",
         "imageFile": "{_internal}/cc.png",
         "placeFile": "{_internal}/cc.txt",
         "palette": "{_internal}/palettes/wct/CC.pal",
