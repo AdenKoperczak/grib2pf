@@ -737,7 +737,7 @@ class MainWindow(QWidget):
         if self.process is not None:
             self.process.kill()
             self.process.wait()
-        if not self.save_file(self.filePicker.fileName, False):
+        if not self.save_file(self.filePicker.fileName, True):
             return
 
         path = location
