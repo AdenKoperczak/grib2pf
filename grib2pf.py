@@ -218,6 +218,8 @@ def main():
     p.add_argument("--json", type = str,
                    help = """JSON representing your settings""")
 
+    print(sys.argv)
+
     if len(sys.argv) == 1:
         if os.path.exists(defaultSettingsPath2):
             args = JsoncParser.parse_file(defaultSettingsPath2)
@@ -242,5 +244,5 @@ if __name__ == "__main__":
     try:
         main()
     except Exception as e:
-        print(traceback.from_exc(e))
+        traceback.print_exception(exc(e)
         input("Press enter to exit")
