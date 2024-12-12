@@ -97,13 +97,10 @@ jobs:
       shell: pwsh
       run: |
         cd ${{ github.workspace }}/source
-        ls build
-        ls build/lib
-        ls build/bin
 
         Copy-Item build/grib2pf.dll dist/grib2pf/_internal
-        Copy-Item build/lib/eccodes.dll dist/grib2pf/_internal
-        Copy-Item build/lib/eccodes_memfs.dll dist/grib2pf/_internal
+        Copy-Item build/bin/eccodes.dll dist/grib2pf/_internal
+        Copy-Item build/bin/eccodes_memfs.dll dist/grib2pf/_internal
 
         Copy-Item README.md dist/grib2pf/
         Copy-Item ACKNOWLEDGMENTS.md dist/grib2pf/
