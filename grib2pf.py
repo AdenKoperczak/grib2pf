@@ -77,7 +77,7 @@ End:
         lib = Grib2PfLib()
         err, lonL, lonR, latT, latB = lib.generate_image(settings)
         if err:
-            exit(err)
+            sys.exit(err)
 
         latT = round(latT, 3)
         latB = round(latB, 3)
@@ -96,8 +96,8 @@ End:
                     lonL = lonL,
                     lonR = lonR
                 ))
-        self._log("Finnished generating")
-        exit(0)
+        self._log("Finished generating")
+        sys.exit(0)
 
     def generate(self, url = None):
         if url is not None:
