@@ -244,5 +244,5 @@ if __name__ == "__main__":
     try:
         main()
     except Exception as e:
-        traceback.print_exception(exc(e)
+        traceback.print_exception(e)
         input("Press enter to exit")
