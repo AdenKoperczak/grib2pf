@@ -6,6 +6,7 @@ import time
 import re
 import asyncio
 import os
+import multiprocessing
 from multiprocessing import Process
 
 from aws import AWSHandler
@@ -104,7 +105,7 @@ End:
         if self.proc is not None and self.proc.is_alive():
             self._log("Killing old process. Likely failed to update.")
             self.proc.kill()
-            self.proc.wait()
+            self.proc.join()
             self.proc.close()
         if self.proc is not None:
             self.proc.close()
@@ -218,8 +219,6 @@ def main():
     p.add_argument("--json", type = str,
                    help = """JSON representing your settings""")
 
-    print(sys.argv)
-
     if len(sys.argv) == 1:
         if os.path.exists(defaultSettingsPath2):
             args = JsoncParser.parse_file(defaultSettingsPath2)
@@ -240,6 +239,8 @@ def main():
         pass
 
 if __name__ == "__main__":
+    if sys.platform.startswith('win'):
+        multiprocessing.freeze_support()
     import traceback
     try:
         main()
