@@ -1,3 +1,4 @@
+#define _USE_MATH_DEFINES
 #include "grib2pf.h"
 #include <stdio.h>
 #include <stdlib.h>
