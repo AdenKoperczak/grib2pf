@@ -9,7 +9,7 @@ import os
 from multiprocessing import Process
 
 from aws import AWSHandler
-from grib2pflib import Grib2PfLib, Settings, ColorTable
+from grib2pflib import Grib2PfLib, Settings
 
 TIME_FMT = "[%Y-%m-%d %H:%M:%S.{}]"
 
@@ -131,7 +131,7 @@ async def run_setting(settings):
             replace_location(settings.get("imageFile", None)),
             replace_location(settings.get("placeFile", None)),
             replace_location(settings.get("gzipped", True)),
-            ColorTable(replace_location(settings.get("palette", None))),
+            replace_location(settings.get("palette", None)),
             settings.get("title", "GRIB Placefile"),
             settings.get("refresh", 60),
             settings.get("imageURL", None),
