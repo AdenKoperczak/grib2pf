@@ -8,6 +8,7 @@ import asyncio
 import os
 import multiprocessing
 from multiprocessing import Process
+import sys
 
 from aws import AWSHandler
 from grib2pflib import Grib2PfLib, Settings
@@ -127,12 +128,15 @@ def replace_location(text):
         return text
 
 async def run_setting(settings):
+    palette = replace_location(settings.get("palette"))
+    if not sys.platform.startswith('win'): # Windows...cant...fork?
+        palette = ColorTable(palette)
     placefile = GRIBPlacefile(
             settings.get("url", None),
             replace_location(settings.get("imageFile", None)),
             replace_location(settings.get("placeFile", None)),
             replace_location(settings.get("gzipped", True)),
-            replace_location(settings.get("palette", None)),
+            replace_location(palette),
             settings.get("title", "GRIB Placefile"),
             settings.get("refresh", 60),
             settings.get("imageURL", None),
@@ -175,7 +179,6 @@ async def run_settings(settings):
 
 def main():
     import argparse
-    import sys
     from jsonc_parser.parser import JsoncParser
 
 
