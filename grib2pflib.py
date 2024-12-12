@@ -188,13 +188,15 @@ class Settings(Structure):
 
 class Grib2PfLib:
     PATHS = [
-        "./libgrib2pf",
-        "./build/libgrib2pf",
+        "{}/libgrib2pf",
+        "{}/build/libgrib2pf",
         "libgrib2pf",
     ]
     def __init__(self, path = None):
+        location = os.path.split(__file__)[0]
         if path is None:
             for p in self.PATHS:
+                p = p.replace("{}", location)
                 if platform.system() == "Linux":
                     p += ".so"
                 path = p

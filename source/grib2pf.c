@@ -31,6 +31,13 @@ typedef struct {
 #define CHUNCK_SIZE (4 * (1<<20))
 #define CHUNCK_PAD  1024
 
+void print_keys(codes_handle* h) {
+    codes_keys_iterator* keys = codes_keys_iterator_new(h, 0, "");
+    while (codes_keys_iterator_next(keys)) {
+        printf("%s\n", codes_keys_iterator_get_name(keys));
+    }
+}
+
 size_t chunk_from_server(void *contents, size_t size, size_t nmemb, void *userp) {
     DownloadingData* data = userp;
     size_t inputSize = size * nmemb;
@@ -43,6 +50,7 @@ size_t chunk_from_server(void *contents, size_t size, size_t nmemb, void *userp)
     if (data->finished) {
         fprintf(stderr, "Got more data after finished inflating\n");
     }
+
 
     if (data->gzipped) {
         data->strm.next_in  = contents;
@@ -87,8 +95,8 @@ size_t chunk_from_server(void *contents, size_t size, size_t nmemb, void *userp)
             data->out.data = ptr;
             data->out.size += CHUNCK_SIZE;
         }
-        memcpy(data->out.data + data->out.current, contents, size);
-        data->out.current += size;
+        memcpy(data->out.data + data->out.current, contents, inputSize);
+        data->out.current += inputSize;
     }
 
     return inputSize;
@@ -119,8 +127,6 @@ int generate_image(const Settings* settings, OutputCoords* output) {
     CURLcode res;
 
     DownloadingData data;
-
-
     data.finished = false;
 
     data.out.size = 0;
@@ -168,16 +174,44 @@ int generate_image(const Settings* settings, OutputCoords* output) {
     }
     inflateEnd(&(data.strm));
 
-    h = codes_handle_new_from_message(NULL, data.out.data, totalSize);
+    uint8_t* d = data.out.data;
+    i = 4;
+    while (i < totalSize) {
+        if (memcmp(d, "GRIB", 4) == 0) {
+            break;
+        }
+        d++;
+        i++;
+    }
+    totalSize = totalSize + 4 - i;
+
+    h = codes_handle_new_from_message(NULL, d, totalSize);
     if (h == NULL) {
         fprintf(stderr, "Could not read in product\n");
         return 1;
     }
 
-    CODES_CHECK(codes_get_double(h, "longitudeOfFirstGridPointInDegrees", &lonL), 0);
-    CODES_CHECK(codes_get_double(h, "longitudeOfLastGridPointInDegrees", &lonR), 0);
-    CODES_CHECK(codes_get_double(h, "latitudeOfFirstGridPointInDegrees", &latT), 0);
-    CODES_CHECK(codes_get_double(h, "latitudeOfLastGridPointInDegrees", &latB), 0);
+    iter = codes_grib_iterator_new(h, 0, &err);
+    if (err != CODES_SUCCESS) CODES_CHECK(err, 0);
+
+    lonL = 1000;
+    lonR = -1000;
+    latB = 1000;
+    latT = -1000;
+
+    while (codes_grib_iterator_next(iter, &lat, &lon, &value)) {
+        if (lon > lonR)
+            lonR = lon;
+        if (lon < lonL)
+            lonL = lon;
+        if (lat > latT)
+            latT = lat;
+        if (lat < latB)
+            latB = lat;
+    }
+
+    codes_grib_iterator_delete(iter);
+
     output->lonL = lonL;
     output->lonR = lonR;
     output->latT = latT;
@@ -235,7 +269,7 @@ int generate_image(const Settings* settings, OutputCoords* output) {
     image.format = PNG_FORMAT_RGBA;
     image.width  = settings->imageWidth;
     image.height = settings->imageHeight;
-    image.flags  = PNG_IMAGE_FLAG_COLORSPACE_NOT_sRGB;
+    image.flags = 0;
 
     imageBuffer = malloc(PNG_IMAGE_SIZE(image));
     if (imageBuffer == NULL) {
