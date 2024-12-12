@@ -98,7 +98,8 @@ jobs:
       run: |
         cd ${{ github.workspace }}/source
         ls build
-        ls build/*
+        ls build/lib
+        ls build/bin
 
         Copy-Item build/grib2pf.dll dist/grib2pf/_internal
         Copy-Item build/lib/eccodes.dll dist/grib2pf/_internal
