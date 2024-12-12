@@ -1,4 +1,5 @@
 #define _USE_MATH_DEFINES
+#define GRIB2PF_LIBRARY
 #include "grib2pf.h"
 #include <stdio.h>
 #include <stdlib.h>
