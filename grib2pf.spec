@@ -8,6 +8,9 @@ grib2pf_a = Analysis(
     ['grib2pf.py'],
     pathex=[],
     binaries=[
+        ('build\\grib2pf.dll', '.'),
+        ('build\\bin\\eccodes.dll', '.'),
+        ('build\\bin\\eccodes_memfs.dll', '.')
     ],
     datas=[
         ( "README.md", '.' ),
