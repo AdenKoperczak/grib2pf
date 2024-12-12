@@ -11,7 +11,7 @@ from multiprocessing import Process
 import sys
 
 from aws import AWSHandler
-from grib2pflib import Grib2PfLib, Settings
+from grib2pflib import Grib2PfLib, Settings, ColorTable
 
 TIME_FMT = "[%Y-%m-%d %H:%M:%S.{}]"
 
