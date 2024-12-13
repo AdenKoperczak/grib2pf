@@ -7,6 +7,7 @@
 #include <math.h>
 #include <stdbool.h>
 #include <string.h>
+#include <time.h>
 
 #include "png.h"
 #include "eccodes.h"
@@ -14,8 +15,11 @@
 #include "curl/curl.h"
 #include "color_table.h"
 
-#define PROJECT_LAT_Y(lat) log(tan(M_PI / 4 + M_PI * lat / 360))
+const double MERCADER_COEF = M_PI / 360;
+const double MERCADER_OFFS = M_PI / 4;
 
+#define PROJECT_LAT_Y(lat) log(tan(MERCADER_OFFS + lat * MERCADER_COEF))
+#define TIMEFMT "%Y-%m-%d %H:%M:%S"
 
 typedef struct {
     size_t size;
@@ -29,6 +33,23 @@ typedef struct {
     bool gzipped;
     bool finished;
 } DownloadingData;
+
+void _log(const Settings* settings, char* message) {
+    if (!settings->verbose) {
+        return;
+    }
+    struct timespec ts;
+    clock_gettime(CLOCK_REALTIME, &ts);
+    time_t tm = time(NULL);
+    int32_t frac = ts.tv_nsec / 1000000;
+
+    char buffer[24];
+    if(strftime(buffer, sizeof(buffer), TIMEFMT, localtime(&tm)) == 0) {
+        buffer[0] = '\0';
+    }
+
+    printf("[%s.%03d] [%s] %s\n", buffer, frac, settings->title, message);
+}
 
 #define CHUNCK_SIZE (4 * (1<<20))
 #define CHUNCK_PAD  1024
@@ -106,11 +127,9 @@ size_t chunk_from_server(void *contents, size_t size, size_t nmemb, void *userp)
 
 int generate_image(const Settings* settings, OutputCoords* output) {
     int err = 0;
-    double lat, lon, value;
-    double x, y, xM, yM, yB;
-    size_t iX, iY, i;
+    double xM, yM, yB;
+    size_t i;
     double missingValue = 1.0e36;
-    long bitmapPresent = 0;
     uint8_t* imageBuffer = NULL;
 
     double* imageData = NULL;
@@ -145,6 +164,7 @@ int generate_image(const Settings* settings, OutputCoords* output) {
 
     data.gzipped = settings->gzipped;
 
+    _log(settings, "Downloading");
     err = inflateInit2(&(data.strm), 15 + 16);
     if (err != Z_OK) {
         fprintf(stderr, "Could not initialize zlib stream\n");
@@ -176,6 +196,8 @@ int generate_image(const Settings* settings, OutputCoords* output) {
     }
     inflateEnd(&(data.strm));
 
+    _log(settings, "Preparing Data");
+
     uint8_t* d = data.out.data;
     i = 4;
     while (i < totalSize) {
@@ -193,15 +215,27 @@ int generate_image(const Settings* settings, OutputCoords* output) {
         return 1;
     }
 
-    iter = codes_grib_iterator_new(h, 0, &err);
-    if (err != CODES_SUCCESS) CODES_CHECK(err, 0);
+    size_t latLonValuesSize;
+    double* latLonValues;
+    CODES_CHECK(codes_get_size(h, "latLonValues", &latLonValuesSize), 0);
+    latLonValues = malloc(latLonValuesSize * sizeof(double));
+    if (latLonValues == NULL) {
+        return 1;
+    }
+    CODES_CHECK(codes_get_double_array(h, "latLonValues",
+                latLonValues, &latLonValuesSize), 0);
+
+    codes_handle_delete(h);
+    free(data.out.data);
 
     lonL = 1000;
     lonR = -1000;
     latB = 1000;
     latT = -1000;
 
-    while (codes_grib_iterator_next(iter, &lat, &lon, &value)) {
+    for (i = 0; i < latLonValuesSize; i += 3) {
+        double lat = latLonValues[i + 0];
+        double lon = latLonValues[i + 1];
         if (lon > lonR)
             lonR = lon;
         if (lon < lonL)
@@ -212,8 +246,6 @@ int generate_image(const Settings* settings, OutputCoords* output) {
             latB = lat;
     }
 
-    codes_grib_iterator_delete(iter);
-
     output->lonL = lonL;
     output->lonR = lonR;
     output->latT = latT;
@@ -223,48 +255,42 @@ int generate_image(const Settings* settings, OutputCoords* output) {
     yM = (settings->imageHeight - 0.01) / (PROJECT_LAT_Y(latB) - PROJECT_LAT_Y(latT));
     yB = PROJECT_LAT_Y(latT);
 
-    CODES_CHECK(codes_get_long(h, "bitmapPresent", &bitmapPresent), 0);
-    if (bitmapPresent) {
-        CODES_CHECK(codes_set_double(h, "missingValue", missingValue), 0);
-    }
-
-    iter = codes_grib_iterator_new(h, 0, &err);
-    if (err != CODES_SUCCESS) CODES_CHECK(err, 0);
-
-    imageData = calloc(settings->imageWidth * settings->imageHeight, sizeof(*imageData));
-    counts    = calloc(settings->imageWidth * settings->imageHeight, sizeof(*counts));
+    imageData = malloc(settings->imageWidth * settings->imageHeight * sizeof(*imageData));
+    counts    = malloc(settings->imageWidth * settings->imageHeight * sizeof(*counts));
     if (imageData == NULL || counts == NULL) {
         return 1;
     }
 
-    while (codes_grib_iterator_next(iter, &lat, &lon, &value)) {
-        x = (lon - lonL) * xM;
-        y = (PROJECT_LAT_Y(lat) - yB) * yM;
+    double lastLat = -10000;
+    double lastY   = 0;
 
-        if (x < 0 || y < 0) {
-            fprintf(stderr, "Coordinate (%lf,%lf) out of range\n", x, y);
-            continue;
-        }
-        iX = (size_t) x; // TODO round
-        iY = (size_t) y;
-        if (iX >= settings->imageWidth || iY >= settings->imageHeight) {
-            fprintf(stderr, "Coordinate (%lf,%lf) out of range\n", x, y);
-            continue;
-        }
-        i = iX + iY * settings->imageWidth;
+    for (i = 0; i < latLonValuesSize; i += 3) {
+        double lat   = latLonValues[i + 0];
+        double lon   = latLonValues[i + 1];
+        double value = latLonValues[i + 2];
 
-        if (bitmapPresent && value == missingValue) {
-            fprintf(stderr, "Missing Value\n");
-            continue;
+        double x = (lon - lonL) * xM;
+        double y;
+        if (lat == lastLat) {
+            y = lastY;
+        } else {
+            y = (PROJECT_LAT_Y(lat) - yB) * yM;
+            lastLat = lat;
+            lastY   = y;
         }
 
-        imageData[i] += value;
-        counts[i]    += 1;
+        if (x < 0 || y < 0 ||
+                x >= settings->imageWidth || y >= settings->imageHeight) {
+            continue;
+        }
+        size_t iX = (size_t) x;
+        size_t iY = (size_t) y;
+        size_t index = iX + iY * settings->imageWidth;
+
+        imageData[index] += value;
+        counts[index]    += 1;
     }
-
-    codes_grib_iterator_delete(iter);
-    codes_handle_delete(h);
-    free(data.out.data);
+    free(latLonValues);
 
     memset(&image, 0, sizeof(image));
     image.version = PNG_IMAGE_VERSION;
@@ -278,6 +304,8 @@ int generate_image(const Settings* settings, OutputCoords* output) {
         return 1;
     }
 
+    _log(settings, "Rendering Image");
+
     for (i = 0; i < settings->imageWidth * settings->imageHeight; i++) {
         if (counts[i] == 0) {
             imageBuffer[i * 4 + 0] = 0;
@@ -285,7 +313,7 @@ int generate_image(const Settings* settings, OutputCoords* output) {
             imageBuffer[i * 4 + 2] = 0;
             imageBuffer[i * 4 + 3] = 0;
         } else {
-            value = imageData[i] / counts[i];
+            double value = imageData[i] / counts[i];
 
             color_table_get(settings->palette, value, imageBuffer + i * 4);
         }

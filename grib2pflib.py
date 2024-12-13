@@ -166,10 +166,11 @@ class Settings(Structure):
         ("imageHeight", c_size_t),
         ("verbose", c_bool),
         ("timeout", c_ulonglong),
+        ("title", c_char_p),
     ]
 
     def __init__(self, url, gzipped, imageFile, palette, imageWidth,
-                 imageHeight, verbose, timeout):
+                 imageHeight, verbose, timeout, title):
         Structure.__init__(self)
 
         if isinstance(palette, ColorTable):
@@ -185,6 +186,7 @@ class Settings(Structure):
         self.palette     = pointer(self.palette_)
         self.verbose     = c_bool(verbose)
         self.timeout     = c_ulonglong(timeout)
+        self.title       = c_char_p(title.encode("utf-8"))
 
 class Grib2PfLib:
     PATHS_LINUX = [

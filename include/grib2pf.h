@@ -17,6 +17,7 @@ typedef struct {
     size_t imageHeight;
     bool verbose;
     uint64_t timeout;
+    const char* title;
 } Settings;
 
 #define GRIB2PF_LIB

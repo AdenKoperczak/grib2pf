@@ -73,7 +73,8 @@ End:
                             self.width,
                             self.height,
                             self.verbose,
-                            self.timeout)
+                            self.timeout,
+                            self.title)
         lib = Grib2PfLib()
         err, lonL, lonR, latT, latB = lib.generate_image(settings)
         if err:
