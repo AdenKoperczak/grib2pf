@@ -28,20 +28,7 @@ jobs:
       uses: actions/checkout@v4
       with:
         path: ${{ github.workspace }}/source
-
-    - name: Configure eccodes
-      shell: pwsh
-      run: |
-        git config --global core.symlinks true
-        conda config --set always_yes yes
-
-    - name: Checkout eccodes
-      shell: pwsh
-      run: |
-        git clone --depth 1 https://github.com/ecmwf/eccodes.git $env:ECCODES_SRC
-        cd $env:ECCODES_SRC
-        git fetch --all --tags --prune
-        git checkout tags/2.38.0
+        submodules: recursive
 
     - name: Checkout ecbuild
       shell: pwsh

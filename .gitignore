@@ -2,4 +2,3 @@ venv
 __pycache__
 settings.json*
 build
-eccodes
