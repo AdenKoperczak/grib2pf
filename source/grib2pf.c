@@ -41,7 +41,7 @@ void _log(const Settings* settings, char* message) {
     if (!settings->verbose) {
         return;
     }
-    struct _timeb64 ts;
+    struct __timeb64 ts;
     _ftime64(&ts);
     time_t tm = time(NULL);
     int32_t frac = ts.millitm;
