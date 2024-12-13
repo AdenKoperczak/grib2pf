@@ -15,11 +15,12 @@
 #include "curl/curl.h"
 #include "color_table.h"
 
+#define TIMEFMT "%Y-%m-%d %H:%M:%S"
+
 const double MERCADER_COEF = M_PI / 360;
 const double MERCADER_OFFS = M_PI / 4;
 
 #define PROJECT_LAT_Y(lat) log(tan(MERCADER_OFFS + lat * MERCADER_COEF))
-#define TIMEFMT "%Y-%m-%d %H:%M:%S"
 
 typedef struct {
     size_t size;
@@ -34,6 +35,25 @@ typedef struct {
     bool finished;
 } DownloadingData;
 
+#ifdef _WIN32
+#include <sys\timeb.h>
+void _log(const Settings* settings, char* message) {
+    if (!settings->verbose) {
+        return;
+    }
+    struct _timeb64 ts;
+    _ftime64(&ts);
+    time_t tm = time(NULL);
+    int32_t frac = ts.millitm;
+
+    char buffer[24];
+    if(strftime(buffer, sizeof(buffer), TIMEFMT, localtime(&tm)) == 0) {
+        buffer[0] = '\0';
+    }
+
+    printf("[%s.%03d] [%s] %s\n", buffer, frac, settings->title, message);
+}
+#else
 void _log(const Settings* settings, char* message) {
     if (!settings->verbose) {
         return;
@@ -50,6 +70,7 @@ void _log(const Settings* settings, char* message) {
 
     printf("[%s.%03d] [%s] %s\n", buffer, frac, settings->title, message);
 }
+#endif
 
 #define CHUNCK_SIZE (4 * (1<<20))
 #define CHUNCK_PAD  1024

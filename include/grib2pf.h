@@ -20,11 +20,10 @@ typedef struct {
     const char* title;
 } Settings;
 
-#define GRIB2PF_LIB
-#ifdef GRIB2PF_LIBRARY
-#ifdef _WIN32
+#if defined(GRIB2PF_LIBRARY) && defined(_WIN32)
 #define GRIB2PF_LIB __declspec(dllexport)
-#endif
+#else
+#define GRIB2PF_LIB
 #endif
 
 GRIB2PF_LIB int generate_image(const Settings* settings, OutputCoords* output);
