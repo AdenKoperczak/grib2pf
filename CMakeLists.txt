@@ -31,3 +31,4 @@ target_link_libraries(grib2pf PUBLIC PNG::PNG
                                      eccodes
                                      ZLIB::ZLIB
                                      CURL::libcurl)
+set_property(TARGET grib2pf PROPERTY C_STANDARD 11)
