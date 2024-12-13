@@ -68,6 +68,12 @@ file.
 To install on Linux you can simply download or clone the repository, then run
 the following command to install all dependencies.
 ```
+git submodule init --recursive
+mkdir build
+cd build
+cmake -DCMAKE_BUILD_TYPE=Release ..
+make
+cd ..
 pip install -r requirements.txt
 ```
 You can then run `grib2pf.py` as a normal script.
@@ -147,6 +153,9 @@ Without this, it will only generate once
 `timeout`: How long to wait for a responce from the URL in seconds. Defaults to
 30s. No way to disable, because that will lock up the program
 
+`gzipped`: If the GRIB file is gzip compressed. Defaults to `true`. Is `true`
+for MRMS data.
+
 ## Other Radar Viewers
 If another radar viewer uses a Mercator projection and has placefile support,
 this project should work, although I give no guaranties.
@@ -161,14 +170,5 @@ x,y coordinates are normalized such that 0,0 is the top left, and imageWidth -
 1,imageHeight - 1 is the bottom left of the grib data (image coordinates). This
 is simply a linear transformation of normal Mercator projections, which is
 undone when the placefile is rendered because of the latitude and longitude
-coordinates saved in the placefile. Then for each column and row in the image,
-the nearest column or row in the grib data is found. Although multiple grib
-data points are under each pixel, only the nearest is used. Averaging would
-require more processing time, because this only needs to touch one grib data
-point per pixel. This is also not a huge issue because this is designed simply
-to give an overview of national weather, and local radar can provide better
-local data. That being said, if someone could create an efficient version of
-averaging (probably using numpy or opencv, or some other library), I would be
-interested. Then, the value of each point is converted to a color based on the
-color file, and the image is saved to disk. The placefile simply has the path
-or URL to the image, and the coordinates of the 4 corners of the data.
+coordinates saved in the placefile. The pixels are the average of all data
+points inside of them.

@@ -11,10 +11,7 @@ of this project.
 
 | Dependency | License | Notes |
 | ---------- | ------- | ----- |
-| [pygrib](https://jswhit.github.io/pygrib/) | [MIT License](https://spdx.org/licenses/MIT.html) | Compiled for this project
 | [ecCodes](https://github.com/ecmwf/eccodes) | [Apache-2.0 License](https://spdx.org/licenses/Apache-2.0.html) | Compiled for this project
-| [numpy](https://numpy.org) | [BSD 3 Clause](https://spdx.org/licenses/BSD-3-Clause.html) | 
-| [Pillow](https://python-pillow.org/) | [MIT-CMU License](https://spdx.org/licenses/MIT-CMU.html) |
 | [requests](https://docs.python-requests.org/) | [Apache-2.0 License](https://spdx.org/licenses/Apache-2.0.html) |
 | [jsonc-parser](https://github.com/NickolaiBeloguzov/jsonc-parser) | [MIT License](https://spdx.org/licenses/MIT.html) |
 | [Python 3.11](https://python.org/) | [PFS License](https://docs.python.org/3.11/license.html#psf-license) |

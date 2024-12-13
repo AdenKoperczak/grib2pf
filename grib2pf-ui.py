@@ -206,6 +206,7 @@ class PlacefileEditor(QWidget):
         "timeout":              30,
         "regenerateTime":       60,
         "pullPeriod":           10,
+        "gzipped":              True,
     }
 
     def _make_enabled_callback(self, widget, enabler):
@@ -236,6 +237,7 @@ class PlacefileEditor(QWidget):
             "timeout":          QSpinBox(),
             "regenerateTime":   QSpinBox(),
             "pullPeriod":       QSpinBox(),
+            "gzipped":          QCheckBox(),
         }
 
         self.dataWidgets["refresh"].setMinimum(15)
@@ -274,6 +276,7 @@ class PlacefileEditor(QWidget):
             ("Image URL", "imageURL", True, "Generally unneeded. The URL to the image file. Useful for hosting on a server"),
             ("Image Width", "imageWidth", True, "The width of the image in pixels"),
             ("Image Height", "imageHeight", True, "The height of the image in pixels"),
+            ("Gzipped", "gzipped", False, "If the GRIB file is Gzip compressed. True for MRMS"),
             ("Verbose", "verbose", False, "If grib2pf should 'print' out information"),
             ("Timeout", "timeout", True, "The time grib2pf should wait for a response from the URL."),
         ]
