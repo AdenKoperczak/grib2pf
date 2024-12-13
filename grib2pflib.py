@@ -2,6 +2,7 @@ from ctypes import *
 import re
 import os
 import sys
+from enum import IntEnum
 
 class OutputCoords(Structure):
     _fields_ = [
@@ -155,6 +156,10 @@ class ColorTable(Structure):
 
         raise Exception(f"Could not parse color {repr(text)}")
 
+RenderModes = {
+    "Average_Data": 0,
+    "Nearest_Data": 1,
+}
 
 class Settings(Structure):
     _fields_ = [
@@ -167,16 +172,20 @@ class Settings(Structure):
         ("verbose", c_bool),
         ("timeout", c_ulonglong),
         ("title", c_char_p),
+        ("mode", c_int),
     ]
 
     def __init__(self, url, gzipped, imageFile, palette, imageWidth,
-                 imageHeight, verbose, timeout, title):
+                 imageHeight, verbose, timeout, title, mode):
         Structure.__init__(self)
 
         if isinstance(palette, ColorTable):
             self.palette_ = palette
         else:
             self.palette_ = ColorTable(palette)
+
+        if isinstance(mode, str):
+            mode = RenderModes[mode]
 
         self.url         = c_char_p(url.encode("utf-8"))
         self.gzipped     = c_bool(gzipped)
@@ -187,6 +196,7 @@ class Settings(Structure):
         self.verbose     = c_bool(verbose)
         self.timeout     = c_ulonglong(timeout)
         self.title       = c_char_p(title.encode("utf-8"))
+        self.mode        = c_int(mode)
 
 class Grib2PfLib:
     PATHS_LINUX = [

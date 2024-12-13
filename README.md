@@ -156,6 +156,11 @@ Without this, it will only generate once
 `gzipped`: If the GRIB file is gzip compressed. Defaults to `true`. Is `true`
 for MRMS data.
 
+`renderMode`: How the renderer should select the data for each pixel.
+`Average_Data` averages the data under the pixel. `Nearest_Data` finds the
+nearest data point the the center of the pixel. `Nearest_Data` is good for 
+integer or flag data. Otherwise `Average_Data` is probrably better.
+
 ## Other Radar Viewers
 If another radar viewer uses a Mercator projection and has placefile support,
 this project should work, although I give no guaranties.

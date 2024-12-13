@@ -22,6 +22,7 @@
         "refresh": 10,
         "regenerateTime": 60,
         "title": "MRMS Precipitation Flag",
-        "pullPeriod": 10
+        "pullPeriod": 10,
+        "renderMode": "Nearest_Data"
     }
 ]

@@ -246,8 +246,10 @@ int generate_image(const Settings* settings, OutputCoords* output) {
     CODES_CHECK(codes_get_double_array(h, "latLonValues",
                 latLonValues, &latLonValuesSize), 0);
 
-    codes_handle_delete(h);
-    free(data.out.data);
+    if (settings->mode != Nearest_Data) {
+        codes_handle_delete(h);
+        free(data.out.data);
+    }
 
     lonL = 1000;
     lonR = -1000;
@@ -276,8 +278,8 @@ int generate_image(const Settings* settings, OutputCoords* output) {
     yM = (settings->imageHeight - 0.01) / (PROJECT_LAT_Y(latB) - PROJECT_LAT_Y(latT));
     yB = PROJECT_LAT_Y(latT);
 
-    imageData = malloc(settings->imageWidth * settings->imageHeight * sizeof(*imageData));
-    counts    = malloc(settings->imageWidth * settings->imageHeight * sizeof(*counts));
+    imageData = calloc(settings->imageWidth * settings->imageHeight, sizeof(*imageData));
+    counts    = calloc(settings->imageWidth * settings->imageHeight, sizeof(*counts));
     if (imageData == NULL || counts == NULL) {
         return 1;
     }
@@ -285,31 +287,77 @@ int generate_image(const Settings* settings, OutputCoords* output) {
     double lastLat = -10000;
     double lastY   = 0;
 
-    for (i = 0; i < latLonValuesSize; i += 3) {
-        double lat   = latLonValues[i + 0];
-        double lon   = latLonValues[i + 1];
-        double value = latLonValues[i + 2];
+    switch (settings->mode) {
+    case Average_Data:
+        for (i = 0; i < latLonValuesSize; i += 3) {
+            double lat   = latLonValues[i + 0];
+            double lon   = latLonValues[i + 1];
+            double value = latLonValues[i + 2];
 
-        double x = (lon - lonL) * xM;
-        double y;
-        if (lat == lastLat) {
-            y = lastY;
-        } else {
-            y = (PROJECT_LAT_Y(lat) - yB) * yM;
-            lastLat = lat;
-            lastY   = y;
+            double x = (lon - lonL) * xM;
+            double y;
+            if (lat == lastLat) {
+                y = lastY;
+            } else {
+                y = (PROJECT_LAT_Y(lat) - yB) * yM;
+                lastLat = lat;
+                lastY   = y;
+            }
+
+            if (x < 0 || y < 0 ||
+                    x >= settings->imageWidth || y >= settings->imageHeight) {
+                continue;
+            }
+            size_t iX = (size_t) x;
+            size_t iY = (size_t) y;
+            size_t index = iX + iY * settings->imageWidth;
+
+            imageData[index] += value;
+            counts[index]    += 1;
         }
-
-        if (x < 0 || y < 0 ||
-                x >= settings->imageWidth || y >= settings->imageHeight) {
-            continue;
+        break;
+    case Nearest_Data:
+        double* nearestDist = malloc(settings->imageWidth * settings->imageHeight * sizeof(*nearestDist));
+        if (nearestDist == NULL) {
+            return 1;
         }
-        size_t iX = (size_t) x;
-        size_t iY = (size_t) y;
-        size_t index = iX + iY * settings->imageWidth;
+        for (i = 0; i < settings->imageWidth * settings->imageHeight; i++) {
+            nearestDist[i] = 2; // distances should be < 1
+        }
+        for (i = 0; i < latLonValuesSize; i += 3) {
+            double lat   = latLonValues[i + 0];
+            double lon   = latLonValues[i + 1];
+            double value = latLonValues[i + 2];
 
-        imageData[index] += value;
-        counts[index]    += 1;
+            double x = (lon - lonL) * xM;
+            double y;
+            if (lat == lastLat) {
+                y = lastY;
+            } else {
+                y = (PROJECT_LAT_Y(lat) - yB) * yM;
+                lastLat = lat;
+                lastY   = y;
+            }
+
+            if (x < 0 || y < 0 ||
+                    x >= settings->imageWidth || y >= settings->imageHeight) {
+                continue;
+            }
+            size_t iX = (size_t) x;
+            size_t iY = (size_t) y;
+            size_t index = iX + iY * settings->imageWidth;
+
+            double dx = (x - (iX + 0.5));
+            double dy = (y - (iY + 0.5));
+            double dist = sqrt(dx * dx + dy * dy);
+
+            if (nearestDist[index] > dist) {
+                imageData[index]   = value;
+                counts[index]      = 1;
+                nearestDist[index] = dist;
+            }
+        }
+        break;
     }
     free(latLonValues);
 

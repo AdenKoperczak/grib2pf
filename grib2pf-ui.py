@@ -20,6 +20,7 @@ location = os.path.split(__file__)[0]
 
 MIME_TYPE = "application/x.grib2pf-placefile"
 
+
 class ProductsDialog(QDialog):
     def __init__(self):
         QDialog.__init__(self)
@@ -189,6 +190,7 @@ class FileInput(QWidget):
 
         self.lineEdit.setText(text)
 
+
 class PlacefileEditor(QWidget):
     DEFAULTS = {
         "aws":                  True,
@@ -207,7 +209,13 @@ class PlacefileEditor(QWidget):
         "regenerateTime":       60,
         "pullPeriod":           10,
         "gzipped":              True,
+        "renderMode":           "Average_Data"
     }
+
+    RENDER_MODES = [
+        ["Averaging", "Average_Data"],
+        ["Nearest", "Nearest_Data"],
+    ]
 
     def _make_enabled_callback(self, widget, enabler):
         def callback(*args, **kwargs):
@@ -238,6 +246,7 @@ class PlacefileEditor(QWidget):
             "regenerateTime":   QSpinBox(),
             "pullPeriod":       QSpinBox(),
             "gzipped":          QCheckBox(),
+            "renderMode":       QComboBox(),
         }
 
         self.dataWidgets["refresh"].setMinimum(15)
@@ -260,6 +269,9 @@ class PlacefileEditor(QWidget):
 
         self.dataWidgets["aws"].stateChanged.connect(self.aws_check_callback)
 
+        for name, value in self.RENDER_MODES:
+            self.dataWidgets["renderMode"].addItem(name, value)
+
         self.enableWidgets = {}
 
         view = [
@@ -279,6 +291,7 @@ class PlacefileEditor(QWidget):
             ("Gzipped", "gzipped", False, "If the GRIB file is Gzip compressed. True for MRMS"),
             ("Verbose", "verbose", False, "If grib2pf should 'print' out information"),
             ("Timeout", "timeout", True, "The time grib2pf should wait for a response from the URL."),
+            ("Render Mode", "renderMode", False, "How data is transformed into an image. Average is better for most data. Nearest is better for digital data like precipitation flags."),
         ]
 
         for i, (text, name, optional, tooltip) in enumerate(view):
@@ -332,6 +345,9 @@ class PlacefileEditor(QWidget):
                 widget.set_text(value)
             elif isinstance(widget, ProductsSelect):
                 widget.set_product(value)
+            elif isinstance(widget, QComboBox):
+                index = widget.findData(value)
+                widget.setCurrentIndex(index)
 
             if name in self.enableWidgets:
                 self.enableWidgets[name].setChecked(enabled)
@@ -357,6 +373,8 @@ class PlacefileEditor(QWidget):
                 settings[name] = widget.lineEdit.text()
             elif isinstance(widget, ProductsSelect):
                 settings[name] = widget.get_product()
+            elif isinstance(widget, QComboBox):
+                settings[name] = widget.currentData()
         return settings
 
 class FilePicker(QWidget):

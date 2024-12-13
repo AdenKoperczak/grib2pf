@@ -8,6 +8,11 @@ typedef struct {
     double lonL, lonR, latT, latB;
 } OutputCoords;
 
+typedef enum : int {
+    Average_Data = 0,
+    Nearest_Data = 1,
+} RenderMode;
+
 typedef struct {
     const char* url;
     bool gzipped;
@@ -18,6 +23,7 @@ typedef struct {
     bool verbose;
     uint64_t timeout;
     const char* title;
+    RenderMode mode;
 } Settings;
 
 #if defined(GRIB2PF_LIBRARY) && defined(_WIN32)

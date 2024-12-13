@@ -45,7 +45,8 @@ End:
             width = 1920,
             height = 1080,
             verbose = False,
-            timeout = 30):
+            timeout = 30,
+            mode = "Nearest_Data"):
 
         self.url = url
         self.imageFile = imageFile
@@ -61,6 +62,7 @@ End:
         self.height = height
         self.verbose = verbose
         self.timeout = timeout
+        self.mode = mode
 
         self.proc = None
 
@@ -74,7 +76,8 @@ End:
                             self.height,
                             self.verbose,
                             self.timeout,
-                            self.title)
+                            self.title,
+                            self.mode)
         lib = Grib2PfLib()
         err, lonL, lonR, latT, latB = lib.generate_image(settings)
         if err:
@@ -137,14 +140,15 @@ async def run_setting(settings):
             replace_location(settings.get("imageFile", None)),
             replace_location(settings.get("placeFile", None)),
             replace_location(settings.get("gzipped", True)),
-            replace_location(palette),
+            palette,
             settings.get("title", "GRIB Placefile"),
             settings.get("refresh", 60),
             settings.get("imageURL", None),
             settings.get("imageWidth", 1920),
             settings.get("imageHeight", 1080),
             settings.get("verbose", False),
-            settings.get("timeout", 30))
+            settings.get("timeout", 30),
+            settings.get("renderMode", "Average_Data"))
 
     if settings.get("aws", False):
         awsHandler = AWSHandler(settings["product"])
