@@ -8,7 +8,7 @@ typedef struct {
     double lonL, lonR, latT, latB;
 } OutputCoords;
 
-typedef enum RenderMode : int {
+typedef enum RenderMode {
     Average_Data = 0,
     Nearest_Data = 1,
 } RenderMode;
