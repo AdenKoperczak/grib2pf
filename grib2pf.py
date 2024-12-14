@@ -22,6 +22,7 @@ class GRIBPlacefile:
     PLACEFILE_TEMPLATE = """
 Title: {title}
 RefreshSeconds: {refresh}
+Threshold: {threshold}
 
 Image: "{imageURL}"
     {latT}, {lonL}, 0, 0
@@ -46,7 +47,8 @@ End:
             height = 1080,
             verbose = False,
             timeout = 30,
-            mode = "Nearest_Data"):
+            mode = "Nearest_Data",
+            threshold = 0):
 
         self.url = url
         self.imageFile = imageFile
@@ -63,6 +65,7 @@ End:
         self.verbose = verbose
         self.timeout = timeout
         self.mode = mode
+        self.threshold = threshold
 
         self.proc = None
 
@@ -98,7 +101,8 @@ End:
                     latT = latT,
                     latB = latB,
                     lonL = lonL,
-                    lonR = lonR
+                    lonR = lonR,
+                    threshold = self.threshold,
                 ))
         self._log("Finished generating")
         sys.exit(0)
@@ -148,7 +152,8 @@ async def run_setting(settings):
             settings.get("imageHeight", 1080),
             settings.get("verbose", False),
             settings.get("timeout", 30),
-            settings.get("renderMode", "Average_Data"))
+            settings.get("renderMode", "Average_Data"),
+            settings.get("threshold", 0))
 
     if settings.get("aws", False):
         awsHandler = AWSHandler(settings["product"])
