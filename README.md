@@ -165,11 +165,11 @@ Toolkit](https://www.ncdc.noaa.gov/wct/) reflectivity palette.
 `rainPalette`: The path to a GRS color table to use for this plot in areas with
    rain. (`MRMSTypedReflectivity` only)
 
-`snowPalette`: the path to a grs color table to use for this plot in areas with
-   snow. (`mrmstypedreflectivity` only)
+`snowPalette`: The path to a GRS color table to use for this plot in areas with
+   snow. (`MRMSTypedReflectivity` only)
 
-`hailPalette`: the path to a grs color table to use for this plot in areas with
-   hail. (`mrmstypedreflectivity` only)
+`hailPalette`: The path to a GRS color table to use for this plot in areas with
+   hail. (`MRMSTypedReflectivity` only)
 
 `title`: The title to display in Supercell-Wx
 
