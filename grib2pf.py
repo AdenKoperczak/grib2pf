@@ -215,6 +215,11 @@ class MRMSTypedReflectivityPlacefile:
             self.typeRefreshNeeded = False
             self.reflRefreshNeeded = False
 
+            typeAWS = self.typeAWS
+            reflAWS = self.reflAWS
+            self.typeAWS = None
+            self.reflAWS = None
+
         if self.proc is not None and self.proc.is_alive():
             self._log("Killing old process. Likely failed to update.")
             self.proc.kill()
@@ -225,6 +230,10 @@ class MRMSTypedReflectivityPlacefile:
 
         self.proc = Process(target = self._generate, daemon = True)
         self.proc.start()
+
+        if self.aws:
+            self.typeAWS = typeAWS
+            self.reflAWS = reflAWS
 
     def _log(self, *args, **kwargs):
         if self.verbose:
