@@ -11,15 +11,22 @@ from multiprocessing import Process
 import sys
 
 from aws import AWSHandler
-from grib2pflib import Grib2PfLib, Settings, ColorTable
+from grib2pflib import Grib2PfLib, Settings, ColorTable, MRMSTypedReflSettings
+
+location = os.path.split(__file__)[0]
+
+def replace_location(text):
+    if isinstance(text, str):
+        return text.replace("{_internal}", location)
+    else:
+        return text
 
 TIME_FMT = "[%Y-%m-%d %H:%M:%S.{}]"
 
 def normalize(data):
     return (data  - data.min()) / (data.max() - data.min())
 
-class GRIBPlacefile:
-    PLACEFILE_TEMPLATE = """
+PLACEFILE_TEMPLATE = """
 Title: {title}
 RefreshSeconds: {refresh}
 Threshold: {threshold}
@@ -33,6 +40,8 @@ Image: "{imageURL}"
     {latB}, {lonL}, 0, 1
 End:
 """
+
+class GRIBPlacefile:
     def __init__(
             self,
             url,
@@ -73,14 +82,18 @@ End:
         self._log(f"Generating image")
         settings = Settings(self.url,
                             self.gzipped,
-                            self.imageFile,
-                            self.palette,
-                            self.width,
-                            self.height,
                             self.verbose,
-                            self.timeout,
                             self.title,
-                            self.mode)
+                            self.timeout,
+                            [{
+                                "imageFile": self.imageFile,
+                                "palette": self.palette,
+                                "imageWidth": self.width,
+                                "imageHeight": self.height,
+                                "title": self.title,
+                                "mode": self.mode,
+                                "offset": 0,
+                            }])
         lib = Grib2PfLib()
         err, lonL, lonR, latT, latB = lib.generate_image(settings)
         if err:
@@ -94,7 +107,7 @@ End:
         self._log(f"Generating placefile {self.placeFile}")
 
         with open(self.placeFile, "w") as file:
-            file.write(self.PLACEFILE_TEMPLATE.format(
+            file.write(PLACEFILE_TEMPLATE.format(
                     title = self.title,
                     refresh = self.refresh,
                     imageURL = self.imageURL,
@@ -127,57 +140,162 @@ End:
             t = time.strftime(TIME_FMT).format(format(round((time.time() % 1) * 1000), "0>3"))
             print(t, f"[{self.title}]", *args, **kwargs)
 
-location = os.path.split(__file__)[0]
+class MRMSTypedReflectivityPlacefile:
+    def __init__(self, settings):
+        self.proc = None
+        self.aws       = settings["aws"]
+        if self.aws:
+            self.typeAWS = AWSHandler(settings["typeProduct"])
+            self.reflAWS = AWSHandler(settings["reflProduct"])
+            self.typeRefreshNeeded = False
+            self.reflRefreshNeeded = False
 
-def replace_location(text):
-    if isinstance(text, str):
-        return text.replace("{_internal}", location)
-    else:
-        return text
+        self.title     = settings.get("title", None)
+        self.verbose   = settings.get("verbose", False)
+        self.refresh   = settings.get("refresh", 15)
+        self.imageURL  = settings.get("imageURL", replace_location(settings["imageFile"]))
+        self.placeFile = replace_location(settings.get("placeFile", ""))
+        self.threshold = settings.get("threshold", 0)
+
+        self.settings = {
+            "typeUrl":     settings.get("typeUrl", None),
+            "reflUrl":     settings.get("reflUrl", None),
+            "timeout":     settings.get("timeout", 30),
+            "title":       settings.get("title", None),
+            "verbose":     settings.get("verbose", False),
+            "gzipped":     settings.get("gzipped", False),
+            "imageFile":   replace_location(settings.get("imageFile", None)),
+            "rainPalette": replace_location(settings.get("rainPalette", None)),
+            "snowPalette": replace_location(settings.get("snowPalette", None)),
+            "hailPalette": replace_location(settings.get("hailPalette", None)),
+            "imageWidth":  settings.get("imageWidth", 1920),
+            "imageHeight": settings.get("imageHeight", 1080),
+            "mode":        settings.get("mode", "Average_Data"),
+        }
+
+    def _generate(self):
+        self._log(f"Generating image")
+
+        settings = MRMSTypedReflSettings(**self.settings)
+        lib = Grib2PfLib()
+        err, lonL, lonR, latT, latB = lib.generate_mrms_typed_refl(settings)
+        if err:
+            sys.exit(err)
+
+        latT = round(latT, 3)
+        latB = round(latB, 3)
+        lonL = round(lonL - 360, 3)
+        lonR = round(lonR - 360, 3)
+
+        self._log(f"Generating placefile {self.placeFile}")
+
+        with open(self.placeFile, "w") as file:
+            file.write(PLACEFILE_TEMPLATE.format(
+                    title = self.title,
+                    refresh = self.refresh,
+                    imageURL = self.imageURL,
+                    latT = latT,
+                    latB = latB,
+                    lonL = lonL,
+                    lonR = lonR,
+                    threshold = self.threshold,
+                ))
+        self._log("Finished generating")
+        sys.exit(0)
+
+    def generate(self):
+        if self.aws:
+            self.typeRefreshNeeded = self.typeAWS.update_key() or self.typeRefreshNeeded
+            self.reflRefreshNeeded = self.reflAWS.update_key() or self.reflRefreshNeeded
+
+            if not (self.typeRefreshNeeded and self.reflRefreshNeeded):
+                return
+            self.settings["typeUrl"] = self.typeAWS.get_url()
+            self.settings["reflUrl"] = self.reflAWS.get_url()
+            self.typeRefreshNeeded = False
+            self.reflRefreshNeeded = False
+
+        if self.proc is not None and self.proc.is_alive():
+            self._log("Killing old process. Likely failed to update.")
+            self.proc.kill()
+            self.proc.join()
+            self.proc.close()
+        if self.proc is not None:
+            self.proc.close()
+
+        self.proc = Process(target = self._generate, daemon = True)
+        self.proc.start()
+
+    def _log(self, *args, **kwargs):
+        if self.verbose:
+            t = time.strftime(TIME_FMT).format(format(round((time.time() % 1) * 1000), "0>3"))
+            print(t, f"[{self.title}]", *args, **kwargs)
+
 
 async def run_setting(settings):
-    palette = replace_location(settings.get("palette"))
-    if not sys.platform.startswith('win'): # Windows...cant...fork?
-        palette = ColorTable(palette)
-    placefile = GRIBPlacefile(
-            settings.get("url", None),
-            replace_location(settings.get("imageFile", None)),
-            replace_location(settings.get("placeFile", None)),
-            replace_location(settings.get("gzipped", True)),
-            palette,
-            settings.get("title", "GRIB Placefile"),
-            settings.get("refresh", 60),
-            settings.get("imageURL", None),
-            settings.get("imageWidth", 1920),
-            settings.get("imageHeight", 1080),
-            settings.get("verbose", False),
-            settings.get("timeout", 30),
-            settings.get("renderMode", "Average_Data"),
-            settings.get("threshold", 0))
+    mainType = settings.get("mainType", "basic")
+    if mainType == "basic":
+        palette = replace_location(settings.get("palette"))
+        if not sys.platform.startswith('win'): # Windows...cant...fork?
+            palette = ColorTable(palette)
+        placefile = GRIBPlacefile(
+                settings.get("url", None),
+                replace_location(settings.get("imageFile", None)),
+                replace_location(settings.get("placeFile", None)),
+                replace_location(settings.get("gzipped", True)),
+                palette,
+                settings.get("title", "GRIB Placefile"),
+                settings.get("refresh", 60),
+                settings.get("imageURL", None),
+                settings.get("imageWidth", 1920),
+                settings.get("imageHeight", 1080),
+                settings.get("verbose", False),
+                settings.get("timeout", 30),
+                settings.get("renderMode", "Average_Data"),
+                settings.get("threshold", 0))
 
-    if settings.get("aws", False):
-        awsHandler = AWSHandler(settings["product"])
+        if settings.get("aws", False):
+            awsHandler = AWSHandler(settings["product"])
 
-        while True:
-            if awsHandler.update_key():
-                placefile.generate(awsHandler.get_url())
-            await asyncio.sleep(settings.get("pullPeriod", 10))
-        return
+            while True:
+                if awsHandler.update_key():
+                    placefile.generate(awsHandler.get_url())
+                await asyncio.sleep(settings.get("pullPeriod", 10))
+            return
 
+        last = time.time()
+        placefile.generate()
 
+        if settings.get("regenerateTime", None) is not None:
+            while True:
+                now = time.time()
+                dt = settings["regenerateTime"] - (now - last)
+                if dt > 0:
+                    await asyncio.sleep(dt)
 
-    last = time.time()
-    placefile.generate()
+                last = time.time()
+                placefile.generate()
+    elif mainType == "MRMSTypedReflectivity":
+        placefile = MRMSTypedReflectivityPlacefile(settings)
 
-    if settings.get("regenerateTime", None) is not None:
-        while True:
-            now = time.time()
-            dt = settings["regenerateTime"] - (now - last)
-            if dt > 0:
-                await asyncio.sleep(dt)
+        if settings.get("aws", False):
+            while True:
+                placefile.generate()
+                await asyncio.sleep(settings.get("pullPeriod", 10))
+            return
 
-            last = time.time()
-            placefile.generate()
+        last = time.time()
+        placefile.generate()
+
+        if settings.get("regenerateTime", None) is not None:
+            while True:
+                now = time.time()
+                dt = settings["regenerateTime"] - (now - last)
+                if dt > 0:
+                    await asyncio.sleep(dt)
+
+                last = time.time()
+                placefile.generate()
 
 async def run_settings(settings):
     if isinstance(settings, dict):

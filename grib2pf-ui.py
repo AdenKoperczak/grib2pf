@@ -193,12 +193,18 @@ class FileInput(QWidget):
 
 class PlacefileEditor(QWidget):
     DEFAULTS = {
+        "mainType":             "basic",
         "aws":                  True,
         "product":              "",
+        "typeProduct":          "",
+        "reflProduct":          "",
         "url":                  "",
         "imageFile":            "{_internal}/image.png",
         "placeFile":            "{_internal}/placefile.txt",
         "palette":              "{_internal}/palettes",
+        "rainPalette":          "{_internal}/palettes",
+        "snowPalette":          "{_internal}/palettes",
+        "hailPalette":          "{_internal}/palettes",
         "title":                "",
         "refresh":              15,
         "imageURL":             "",
@@ -215,6 +221,11 @@ class PlacefileEditor(QWidget):
     RENDER_MODES = [
         ["Averaging", "Average_Data"],
         ["Nearest", "Nearest_Data"],
+        ["Nearest", "Nearest_Fast_Data"],
+    ]
+    MAIN_TYPES = [
+        ["Basic", "basic"],
+        ["MRMS Typed Reflectivity", "MRMSTypedReflectivity"],
     ]
 
     def _make_enabled_callback(self, widget, enabler):
@@ -230,12 +241,18 @@ class PlacefileEditor(QWidget):
         self.mainLayout = QGridLayout(self)
 
         self.dataWidgets = {
+            "mainType":         QComboBox(),
             "aws":              QCheckBox(),
             "product":          ProductsSelect(),
+            "typeProduct":      ProductsSelect(),
+            "reflProduct":      ProductsSelect(),
             "url":              QLineEdit(),
             "imageFile":        FileInput(fileFilter = "PNG File (*.png)", save = True),
             "placeFile":        FileInput(fileFilter = "Placefile (*)", save = True),
             "palette":          FileInput(fileFilter = "Color Table (*)", save = False),
+            "rainPalette":      FileInput(fileFilter = "Color Table (*)", save = False),
+            "snowPalette":      FileInput(fileFilter = "Color Table (*)", save = False),
+            "hailPalette":      FileInput(fileFilter = "Color Table (*)", save = False),
             "title":            QLineEdit(),
             "refresh":          QSpinBox(),
             "imageURL":         QLineEdit(),
@@ -267,17 +284,24 @@ class PlacefileEditor(QWidget):
         self.dataWidgets["timeout"].setMinimum(1)
         self.dataWidgets["timeout"].setMaximum(60)
 
-        self.dataWidgets["aws"].stateChanged.connect(self.aws_check_callback)
+        self.dataWidgets["aws"].stateChanged.connect(self.change_enabled_callback)
 
         for name, value in self.RENDER_MODES:
             self.dataWidgets["renderMode"].addItem(name, value)
+
+        for name, value in self.MAIN_TYPES:
+            self.dataWidgets["mainType"].addItem(name, value)
+        self.dataWidgets["mainType"].currentIndexChanged.connect(self.change_enabled_callback)
 
         self.enableWidgets = {}
 
         view = [
             ("Title", "title", False, "The title to be used in Supercell-Wx for this Placefile"),
+            ("Type of Product", "mainType", False, "IDK"),
             ("AWS", "aws", False, "Pull from AWS instead of a URL. Recommended."),
             ("Product", "product", False, "The product to pull from AWS."),
+            ("Precipitation Flag Product", "typeProduct", False, "The product to pull from AWS."),
+            ("Reflectivity Product", "reflProduct", False, "The product to pull from AWS."),
             ("URL", "url", False, "The URL to pull the GRIB/MRMS data from."),
             ("Image File", "imageFile", False, "The path to where the image (png) should be generated"),
             ("Place File", "placeFile", False, "The path to where the placefile should be generated"),
@@ -285,6 +309,9 @@ class PlacefileEditor(QWidget):
             ("Regeneration Period", "regenerateTime", False, "How often the placefile should be regenerated."),
             ("Pull Period", "pullPeriod", False, "How often AWS should be pulled for new data."),
             ("Palette", "palette", True, "The path to a color-table to be used for this product."),
+            ("Rain Palette", "rainPalette", True, "The path to a color-table to be used for this product."),
+            ("Snow Palette", "snowPalette", True, "The path to a color-table to be used for this product."),
+            ("Hail Palette", "hailPalette", True, "The path to a color-table to be used for this product."),
             ("Image URL", "imageURL", True, "Generally unneeded. The URL to the image file. Useful for hosting on a server"),
             ("Image Width", "imageWidth", True, "The width of the image in pixels"),
             ("Image Height", "imageHeight", True, "The height of the image in pixels"),
@@ -311,23 +338,29 @@ class PlacefileEditor(QWidget):
 
                 self.enableWidgets[name] = enabler
                 self.mainLayout.addWidget(enabler, i, 2)
-                widget.setEnabled(enabler.isChecked())
-                enabler.stateChanged.connect(self._make_enabled_callback(widget, enabler))
+                enabler.stateChanged.connect(self.change_enabled_callback)
                 enabler.setToolTip(f"Enable {text}")
 
         self.mainLayout.setRowStretch(len(view), 1)
-        self.aws_check_callback()
+        self.change_enabled_callback()
 
-    AWS_ONLY = {"product", "pullPeriod"}
-    NOT_AWS_ONLY = {"url", "regenerateTime"}
-    def aws_check_callback(self, *args):
-        state = self.dataWidgets["aws"].isChecked()
+    AWS_ONLY            = {"product", "pullPeriod", "typeProduct",
+                           "reflProduct"}
+    NOT_AWS_ONLY        = {"url", "regenerateTime"}
+    TYPED_PREC_ONLY     = {"rainPalette", "snowPalette", "hailPalette",
+                           "typeProduct", "reflProduct"}
+    NOT_TYPED_PREC_ONLY = {"product", "palette", "url"}
+    def change_enabled_callback(self, *args):
+        aws = self.dataWidgets["aws"].isChecked()
+        typedPrec = self.dataWidgets["mainType"].currentData() == "MRMSTypedReflectivity"
 
-        for name in self.AWS_ONLY:
-            self.dataWidgets[name].setEnabled(state)
-
-        for name in self.NOT_AWS_ONLY:
-            self.dataWidgets[name].setEnabled(not state)
+        for name, widget in self.dataWidgets.items():
+            s = (name in self.enableWidgets and not self.enableWidgets[name].isChecked()) or \
+                (name in self.AWS_ONLY and not aws) or \
+                (name in self.NOT_AWS_ONLY and aws) or \
+                (name in self.TYPED_PREC_ONLY and not typedPrec) or \
+                (name in self.NOT_TYPED_PREC_ONLY and typedPrec)
+            widget.setEnabled(not s)
 
     def set_settings(self, settings):
         for name, widget in self.dataWidgets.items():

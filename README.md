@@ -1,7 +1,9 @@
 # grib2pf
-This is a python script which takes GRIB data (mainly MRMS) and outputs it to a
-placefile for usage with Supercell-Wx. This adds the ability for nation wide
-weather radar in Supercell-Wx.
+This is a python script and C code which takes GRIB data (mainly MRMS) and
+outputs it to a placefile for usage with Supercell-Wx. This adds the ability
+for nation wide weather radar in Supercell-Wx.
+
+# TODO UPDATE THIS
 
 ## Setup Guide Windows
 There are 2 main ways to run this in Windows: WSL or via an executable. For
