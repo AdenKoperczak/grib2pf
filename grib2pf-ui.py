@@ -297,7 +297,7 @@ class PlacefileEditor(QWidget):
 
         view = [
             ("Title", "title", False, "The title to be used in Supercell-Wx for this Placefile"),
-            ("Type of Product", "mainType", False, "IDK"),
+            ("Type of Product", "mainType", False, "The type of product to produce."),
             ("AWS", "aws", False, "Pull from AWS instead of a URL. Recommended."),
             ("Product", "product", False, "The product to pull from AWS."),
             ("Precipitation Flag Product", "typeProduct", False, "The product to pull from AWS."),
@@ -309,9 +309,9 @@ class PlacefileEditor(QWidget):
             ("Regeneration Period", "regenerateTime", False, "How often the placefile should be regenerated."),
             ("Pull Period", "pullPeriod", False, "How often AWS should be pulled for new data."),
             ("Palette", "palette", True, "The path to a color-table to be used for this product."),
-            ("Rain Palette", "rainPalette", True, "The path to a color-table to be used for this product."),
-            ("Snow Palette", "snowPalette", True, "The path to a color-table to be used for this product."),
-            ("Hail Palette", "hailPalette", True, "The path to a color-table to be used for this product."),
+            ("Rain Palette", "rainPalette", True, "The path to a color-table to be used for this product where it is raining."),
+            ("Snow Palette", "snowPalette", True, "The path to a color-table to be used for this product where it is snowing."),
+            ("Hail Palette", "hailPalette", True, "The path to a color-table to be used for this product where it is hailing."),
             ("Image URL", "imageURL", True, "Generally unneeded. The URL to the image file. Useful for hosting on a server"),
             ("Image Width", "imageWidth", True, "The width of the image in pixels"),
             ("Image Height", "imageHeight", True, "The height of the image in pixels"),

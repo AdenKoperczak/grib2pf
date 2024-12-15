@@ -3,7 +3,22 @@ This is a python script and C code which takes GRIB data (mainly MRMS) and
 outputs it to a placefile for usage with Supercell-Wx. This adds the ability
 for nation wide weather radar in Supercell-Wx.
 
-# TODO UPDATE THIS
+## Update Guide Windows
+There are 2 ways to update this on Windows. The second way is will allways work
+but takes a bit more effort. The first ways is simpler
+
+### Simple Update
+Unzip the new `grib2pf` folder from the zip overtop your preexisting folder,
+and select "Replace the files in the destination". This will save your settings.
+
+### Complete Update
+1. Go into the `grib2pf` folder, then the `_internal` folder.
+2. Copy `settings.jsonc` or `settings` to your Desktop, or somewhere outside of
+   the `grib2pf` folder.
+3. Delete the `grib2pf` folder.
+4. Unzip the new `grib2pf` folder where you want it.
+4. Move the `settings.jsonc` or `settings` file back into the `_internal` folder
+   inside the `grib2pf` folder.
 
 ## Setup Guide Windows
 There are 2 main ways to run this in Windows: WSL or via an executable. For
@@ -113,9 +128,22 @@ with `--help`. The arguments align with the settings described below.
 ## Settings
 Below are all the settings supported by this program.
 
+`mainType`: The overall type of plot you want generated. Right now only `basic`
+and `MRMSTypedReflectivity` are valid. `basic` just applies the color table to
+the data. `MRMSTypedReflectivity` applies different color tables to the data
+depending on the type precipitation. This is designed to be used with
+reflectivity, although nothing is stopping you from using something else.
+
 `aws`: Boolean describing if AWS data should be used
 
 `product`: AWS product to use
+
+`typeProduct`: The AWS product to use for precipitation type for
+   `MRMSTypedReflectivity`. It should always be end in `/PrecipFlag_00.00/`.
+
+`reflProduct`: The AWS product to use for reflectivity for
+   `MRMSTypedReflectivity`. Although it is called reflectivity, other products
+   will work fine.
 
 `pullTime`: How often to pull AWS for new data
 
@@ -133,6 +161,15 @@ absolute path to a png
 `palette`: The path to a GRS color table to use for this plot. Useful for non
 reflectivity plots. Defaults to [NOAA's Weather and Climate
 Toolkit](https://www.ncdc.noaa.gov/wct/) reflectivity palette.
+
+`rainPalette`: The path to a GRS color table to use for this plot in areas with
+   rain. (`MRMSTypedReflectivity` only)
+
+`snowPalette`: the path to a grs color table to use for this plot in areas with
+   snow. (`mrmstypedreflectivity` only)
+
+`hailPalette`: the path to a grs color table to use for this plot in areas with
+   hail. (`mrmstypedreflectivity` only)
 
 `title`: The title to display in Supercell-Wx
 
