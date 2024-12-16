@@ -85,7 +85,7 @@ file.
 To install on Linux you can simply download or clone the repository, then run
 the following command to install all dependencies.
 ```
-git submodule init --recursive
+git submodule update --init --recursive
 mkdir build
 cd build
 cmake -DCMAKE_BUILD_TYPE=Release ..
@@ -93,7 +93,7 @@ make
 cd ..
 pip install -r requirements.txt
 ```
-You can then run `grib2pf.py` as a normal script.
+You can then run `grib2pf.py` and `grib2pf-ui.py` as normal scripts.
 
 This will only work if your distro does not manage your Python packages.
 Otherwise, you can use a Python virtual environment. To do so, do the
