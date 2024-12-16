@@ -161,42 +161,133 @@ RenderModes = {
     "Nearest_Data": 1,
 }
 
-class Settings(Structure):
+class MessageSettings(Structure):
     _fields_ = [
-        ("url", c_char_p),
-        ("gzipped", c_bool),
         ("imageFile", c_char_p),
         ("palette", POINTER(ColorTable)),
         ("imageWidth", c_size_t),
         ("imageHeight", c_size_t),
-        ("verbose", c_bool),
-        ("timeout", c_ulonglong),
         ("title", c_char_p),
         ("mode", c_int),
+        ("offset", c_size_t),
     ]
 
-    def __init__(self, url, gzipped, imageFile, palette, imageWidth,
-                 imageHeight, verbose, timeout, title, mode):
-        Structure.__init__(self)
+    def set(self, imageFile, palette, imageWidth, imageHeight, title,
+                 mode, offset):
+
+        if isinstance(mode, str):
+            mode = RenderModes[mode]
 
         if isinstance(palette, ColorTable):
             self.palette_ = palette
         else:
             self.palette_ = ColorTable(palette)
 
+        self.imageFile   = c_char_p(imageFile.encode("utf-8"))
+        self.palette     = pointer(self.palette_)
+        self.imageWidth  = c_size_t(imageWidth)
+        self.imageHeight = c_size_t(imageHeight)
+        self.title       = c_char_p(title.encode("utf-8"))
+        self.mode        = c_int(mode)
+        self.offset      = c_size_t(offset)
+
+class Settings(Structure):
+    _fields_ = [
+        ("url", c_char_p),
+        ("gzipped", c_bool),
+        ("timeout", c_ulonglong),
+        ("logName", c_char_p),
+        ("verbose", c_bool),
+
+        ("messageCount", c_size_t),
+        ("messages", POINTER(MessageSettings)),
+    ]
+
+    def __init__(self, url, gzipped, verbose, logName, timeout, messages):
+        Structure.__init__(self)
+
+        self.messages_ = (MessageSettings * len(messages))()
+        for i, message in enumerate(messages):
+            self.messages_[i].set(**message)
+
+        self.url          = c_char_p(url.encode("utf-8"))
+        self.gzipped      = c_bool(gzipped)
+        self.verbose      = c_bool(verbose)
+        self.timeout      = c_ulonglong(timeout)
+        self.logName      = c_char_p(logName.encode("utf-8"))
+        self.messageCount = c_size_t(len(messages))
+        self.messages     = cast(self.messages_, POINTER(MessageSettings))
+
+class MRMSTypedReflSettings(Structure):
+    _fields_ = [
+        ("typeUrl", c_char_p),
+        ("reflUrl", c_char_p),
+        ("timeout", c_ulonglong),
+        ("title", c_char_p),
+        ("verbose", c_bool),
+        ("gzipped", c_bool),
+
+        ("imageFile", c_char_p),
+        ("rainPalette", POINTER(ColorTable)),
+        ("snowPalette", POINTER(ColorTable)),
+        ("hailPalette", POINTER(ColorTable)),
+        ("imageWidth", c_size_t),
+        ("imageHeight", c_size_t),
+        ("mode", c_int),
+    ]
+
+    def __init__(self,
+                 typeUrl,
+                 reflUrl,
+                 timeout,
+                 title,
+                 verbose,
+                 gzipped,
+                 imageFile,
+                 rainPalette,
+                 snowPalette,
+                 hailPalette,
+                 imageWidth,
+                 imageHeight,
+                 mode):
+        Structure.__init__(self)
+
         if isinstance(mode, str):
             mode = RenderModes[mode]
 
-        self.url         = c_char_p(url.encode("utf-8"))
-        self.gzipped     = c_bool(gzipped)
-        self.imageFile   = c_char_p(imageFile.encode("utf-8"))
-        self.imageWidth  = c_size_t(imageWidth)
-        self.imageHeight = c_size_t(imageHeight)
-        self.palette     = pointer(self.palette_)
-        self.verbose     = c_bool(verbose)
+        if isinstance(rainPalette, ColorTable):
+            self.rainPalette_ = rainPalette
+        else:
+            self.rainPalette_ = ColorTable(rainPalette)
+
+        if isinstance(snowPalette, ColorTable):
+            self.snowPalette_ = snowPalette
+        else:
+            self.snowPalette_ = ColorTable(snowPalette)
+
+        if isinstance(hailPalette, ColorTable):
+            self.hailPalette_ = hailPalette
+        else:
+            self.hailPalette_ = ColorTable(hailPalette)
+
+        self.typeUrl     = c_char_p(typeUrl.encode("utf-8"))
+        self.reflUrl     = c_char_p(reflUrl.encode("utf-8"))
         self.timeout     = c_ulonglong(timeout)
         self.title       = c_char_p(title.encode("utf-8"))
+        self.gzipped     = c_bool(gzipped)
+        self.verbose     = c_bool(verbose)
+
+        self.imageFile   = c_char_p(imageFile.encode("utf-8"))
+        self.rainPalette = pointer(self.rainPalette_)
+        self.snowPalette = pointer(self.snowPalette_)
+        self.hailPalette = pointer(self.hailPalette_)
+        self.imageWidth  = c_size_t(imageWidth)
+        self.imageHeight = c_size_t(imageHeight)
         self.mode        = c_int(mode)
+
+    def set_url(self, typeUrl, reflUrl):
+        self.typeUrl = c_char_p(typeUrl.encode("utf-8"))
+        self.reflUrl = c_char_p(reflUrl.encode("utf-8"))
 
 class Grib2PfLib:
     PATHS_LINUX = [
@@ -233,6 +324,17 @@ class Grib2PfLib:
 
         err = self.lib.generate_image(byref(settings), byref(output))
         return err, output.lonL, output.lonR, output.latT, output.latB
+
+    def generate_mrms_typed_refl(self, settings):
+        if not isinstance(settings, MRMSTypedReflSettings):
+            raise TypeError("settings should be of type MRMSTypedReflSettings")
+
+        output = OutputCoords()
+
+        err = self.lib.generate_mrms_typed_refl(byref(settings), byref(output))
+        return err, output.lonL, output.lonR, output.latT, output.latB
+
+
 
 if __name__ == "__main__":
     c = ColorTable()

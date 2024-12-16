@@ -35,9 +35,14 @@ typedef struct {
     bool finished;
 } DownloadingData;
 
+typedef struct {
+    bool verbose;
+    const char* logName;
+} LogSettings;
+
 #ifdef _WIN32
 #include <sys\timeb.h>
-void _log(const Settings* settings, char* message) {
+void _log(const LogSettings* settings, char* message) {
     if (!settings->verbose) {
         return;
     }
@@ -51,10 +56,10 @@ void _log(const Settings* settings, char* message) {
         buffer[0] = '\0';
     }
 
-    printf("[%s.%03d] [%s] %s\n", buffer, frac, settings->title, message);
+    printf("[%s.%03d] [%s] %s\n", buffer, frac, settings->logName, message);
 }
 #else
-void _log(const Settings* settings, char* message) {
+void _log(const LogSettings* settings, char* message) {
     if (!settings->verbose) {
         return;
     }
@@ -68,7 +73,7 @@ void _log(const Settings* settings, char* message) {
         buffer[0] = '\0';
     }
 
-    printf("[%s.%03d] [%s] %s\n", buffer, frac, settings->title, message);
+    printf("[%s.%03d] [%s] %s\n", buffer, frac, settings->logName, message);
 }
 #endif
 
@@ -146,25 +151,31 @@ size_t chunk_from_server(void *contents, size_t size, size_t nmemb, void *userp)
     return inputSize;
 }
 
-int generate_image(const Settings* settings, OutputCoords* output) {
-    int err = 0;
-    double xM, yM, yB;
-    size_t i;
-    double missingValue = 1.0e36;
-    uint8_t* imageBuffer = NULL;
+typedef struct {
+    bool verbose;
+    const char* logName;
+    bool gzipped;
+    const char* url;
+    uint64_t timeout;
+} DownloadSettings;
 
-    double* imageData = NULL;
-    uint32_t* counts   = NULL;
-
-    double lonL, lonR, latT, latB;
-
+typedef struct {
     size_t totalSize;
+    uint8_t* gribStart;
+    uint8_t* data;
+    int error;
+} DownloadedData;
 
-    png_image image;
+DownloadedData download_data(const DownloadSettings* settings) {
+    DownloadedData output;
+    output.error = 0;
 
-    codes_handle* h = NULL;
-    codes_iterator* iter = NULL;
-
+    int err;
+    size_t totalSize;
+    LogSettings logS = {
+        .verbose = settings->verbose,
+        .logName = settings->logName,
+    };
     CURL* curl = NULL;
     CURLcode res;
 
@@ -185,17 +196,19 @@ int generate_image(const Settings* settings, OutputCoords* output) {
 
     data.gzipped = settings->gzipped;
 
-    _log(settings, "Downloading");
+    _log(&logS, "Downloading");
     err = inflateInit2(&(data.strm), 15 + 16);
     if (err != Z_OK) {
         fprintf(stderr, "Could not initialize zlib stream\n");
-        return 1;
+        output.error = 1;
+        return output;
     }
 
     curl = curl_easy_init();
     if (curl == NULL) {
         fprintf(stderr, "Could not initialize curl\n");
-        return 1;
+        output.error = 1;
+        return output;
     }
     curl_easy_setopt(curl, CURLOPT_URL, settings->url);
     curl_easy_setopt(curl, CURLOPT_TIMEOUT, settings->timeout);
@@ -207,7 +220,8 @@ int generate_image(const Settings* settings, OutputCoords* output) {
     if (res != CURLE_OK) {
         fprintf(stderr, "Failed to get URL %s with: %s\n", settings->url,
                 curl_easy_strerror(res));
-        return 1;
+        output.error = 1;
+        return output;
     }
     curl_easy_cleanup(curl);
     if (settings->gzipped) {
@@ -217,48 +231,74 @@ int generate_image(const Settings* settings, OutputCoords* output) {
     }
     inflateEnd(&(data.strm));
 
-    _log(settings, "Preparing Data");
 
     uint8_t* d = data.out.data;
-    i = 4;
-    while (i < totalSize) {
-        if (memcmp(d, "GRIB", 4) == 0) {
-            break;
+    {
+        size_t i = 4;
+        while (i < totalSize) {
+            if (memcmp(d, "GRIB", 4) == 0) {
+                break;
+            }
+            d++;
+            i++;
         }
-        d++;
-        i++;
+        totalSize = totalSize + 4 - i;
     }
-    totalSize = totalSize + 4 - i;
 
-    h = codes_handle_new_from_message(NULL, d, totalSize);
+    output.totalSize = totalSize;
+    output.gribStart = d;
+    output.data      = data.out.data;
+
+    return output;
+}
+
+typedef struct {
+    OutputCoords coords;
+    double* imageData;
+    uint32_t* counts;
+    int error;
+} ImageData;
+
+ImageData generate_image_data(MessageSettings* message, uint8_t* d, size_t size,
+                            bool verbose) {
+    ImageData output;
+    output.error = 0;
+
+    LogSettings logS = {
+        .verbose = verbose,
+        .logName = message->title,
+    };
+    codes_handle* h = codes_handle_new_from_message(NULL, d + message->offset,
+            size - message->offset);
     if (h == NULL) {
         fprintf(stderr, "Could not read in product\n");
-        return 1;
+        output.error = 1;
+        return output;
     }
+
+    _log(&logS, "Preparing Data");
 
     size_t latLonValuesSize;
     double* latLonValues;
     CODES_CHECK(codes_get_size(h, "latLonValues", &latLonValuesSize), 0);
     latLonValues = malloc(latLonValuesSize * sizeof(double));
     if (latLonValues == NULL) {
-        return 1;
+        output.error = 1;
+        return output;
     }
     CODES_CHECK(codes_get_double_array(h, "latLonValues",
                 latLonValues, &latLonValuesSize), 0);
+    codes_handle_delete(h);
 
-    if (settings->mode != Nearest_Data) {
-        codes_handle_delete(h);
-        free(data.out.data);
-    }
-
+    double lonL, lonR, latT, latB;
     lonL = 1000;
     lonR = -1000;
     latB = 1000;
     latT = -1000;
 
-    for (i = 0; i < latLonValuesSize; i += 3) {
-        double lat = latLonValues[i + 0];
-        double lon = latLonValues[i + 1];
+    for (size_t i = 0; i < latLonValuesSize; i += 3) {
+        const double lat = latLonValues[i + 0];
+        const double lon = latLonValues[i + 1];
         if (lon > lonR)
             lonR = lon;
         if (lon < lonL)
@@ -269,27 +309,33 @@ int generate_image(const Settings* settings, OutputCoords* output) {
             latB = lat;
     }
 
-    output->lonL = lonL;
-    output->lonR = lonR;
-    output->latT = latT;
-    output->latB = latB;
+    output.coords.lonL = lonL;
+    output.coords.lonR = lonR;
+    output.coords.latT = latT;
+    output.coords.latB = latB;
 
-    xM = (settings->imageWidth - 0.01)  / (lonR - lonL);
-    yM = (settings->imageHeight - 0.01) / (PROJECT_LAT_Y(latB) - PROJECT_LAT_Y(latT));
-    yB = PROJECT_LAT_Y(latT);
+    const double xM = (message->imageWidth - 0.01)  / (lonR - lonL);
+    const double yM = (message->imageHeight - 0.01) / (PROJECT_LAT_Y(latB) - PROJECT_LAT_Y(latT));
+    const double yB = PROJECT_LAT_Y(latT);
 
-    imageData = calloc(settings->imageWidth * settings->imageHeight, sizeof(*imageData));
-    counts    = calloc(settings->imageWidth * settings->imageHeight, sizeof(*counts));
+    double* imageData = NULL;
+    uint32_t* counts   = NULL;
+    imageData = calloc(message->imageWidth * message->imageHeight, sizeof(*imageData));
+    counts    = calloc(message->imageWidth * message->imageHeight, sizeof(*counts));
     if (imageData == NULL || counts == NULL) {
-        return 1;
+        output.error = 1;
+        return output;
     }
+
+    output.imageData = imageData;
+    output.counts = counts;
 
     double lastLat = -10000;
     double lastY   = 0;
 
-    switch (settings->mode) {
-    case Average_Data:
-        for (i = 0; i < latLonValuesSize; i += 3) {
+    switch (message->mode) {
+    case Average_Data: {
+        for (size_t i = 0; i < latLonValuesSize; i += 3) {
             double lat   = latLonValues[i + 0];
             double lon   = latLonValues[i + 1];
             double value = latLonValues[i + 2];
@@ -305,26 +351,27 @@ int generate_image(const Settings* settings, OutputCoords* output) {
             }
 
             if (x < 0 || y < 0 ||
-                    x >= settings->imageWidth || y >= settings->imageHeight) {
+                    x >= message->imageWidth || y >= message->imageHeight) {
                 continue;
             }
             size_t iX = (size_t) x;
             size_t iY = (size_t) y;
-            size_t index = iX + iY * settings->imageWidth;
+            size_t index = iX + iY * message->imageWidth;
 
             imageData[index] += value;
             counts[index]    += 1;
         }
-        break;
-    case Nearest_Data:
-        double* nearestDist = malloc(settings->imageWidth * settings->imageHeight * sizeof(*nearestDist));
+        break; }
+    case Nearest_Data: {
+        double* nearestDist = malloc(message->imageWidth * message->imageHeight * sizeof(*nearestDist));
         if (nearestDist == NULL) {
-            return 1;
+            output.error = 1;
+            return output;
         }
-        for (i = 0; i < settings->imageWidth * settings->imageHeight; i++) {
-            nearestDist[i] = 2; // distances should be < 1
+        for (size_t i = 0; i < message->imageWidth * message->imageHeight; i++) {
+            nearestDist[i] = 1000000;
         }
-        for (i = 0; i < latLonValuesSize; i += 3) {
+        for (size_t i = 0; i < latLonValuesSize; i += 3) {
             double lat   = latLonValues[i + 0];
             double lon   = latLonValues[i + 1];
             double value = latLonValues[i + 2];
@@ -340,16 +387,78 @@ int generate_image(const Settings* settings, OutputCoords* output) {
             }
 
             if (x < 0 || y < 0 ||
-                    x >= settings->imageWidth || y >= settings->imageHeight) {
+                    x >= message->imageWidth || y >= message->imageHeight) {
                 continue;
             }
             size_t iX = (size_t) x;
             size_t iY = (size_t) y;
-            size_t index = iX + iY * settings->imageWidth;
+
+            size_t index;
+            double dx;
+            double dy;
+            double dist;
+
+            #define DO_NEAREST_FOR_POINT(DX, DY) {                      \
+                index = iX + DX + (iY + DY) * message->imageWidth;      \
+                dx = (x - (iX + DX + 0.5));                             \
+                dy = (y - (iY + DY + 0.5));                             \
+                dist = dx * dx + dy * dy;                               \
+                if (nearestDist[index] > dist) {                        \
+                    imageData[index]   = value;                         \
+                    counts[index]      = 1;                             \
+                    nearestDist[index] = dist;                          \
+                }}
+
+            DO_NEAREST_FOR_POINT(0, 0);
+            if (iX >= 1) DO_NEAREST_FOR_POINT(-1, 0);
+            if (iY >= 1) DO_NEAREST_FOR_POINT(0, -1);
+            if (iX >= 1 && iY >= 1) DO_NEAREST_FOR_POINT(-1, -1);
+            if (iX < message->imageWidth - 1) DO_NEAREST_FOR_POINT(1, 0);
+            if (iY < message->imageHeight - 1) DO_NEAREST_FOR_POINT(0, 1);
+            if (iX < message->imageWidth - 1 && iY < message->imageHeight - 1)
+                DO_NEAREST_FOR_POINT(1, 1);
+            if (iX >= 1 && iY < message->imageHeight - 1)
+                DO_NEAREST_FOR_POINT(-1, 1);
+            if (iX < message->imageWidth - 1 && iY >= 1)
+                DO_NEAREST_FOR_POINT(1, -1);
+        }
+        free(nearestDist);
+        break; }
+    case Nearest_Fast_Data: {
+        double* nearestDist = malloc(message->imageWidth * message->imageHeight * sizeof(*nearestDist));
+        if (nearestDist == NULL) {
+            output.error = 1;
+            return output;
+        }
+        for (size_t i = 0; i < message->imageWidth * message->imageHeight; i++) {
+            nearestDist[i] = 3; // distances should be <= 2
+        }
+        for (size_t i = 0; i < latLonValuesSize; i += 3) {
+            double lat   = latLonValues[i + 0];
+            double lon   = latLonValues[i + 1];
+            double value = latLonValues[i + 2];
+
+            double x = (lon - lonL) * xM;
+            double y;
+            if (lat == lastLat) {
+                y = lastY;
+            } else {
+                y = (PROJECT_LAT_Y(lat) - yB) * yM;
+                lastLat = lat;
+                lastY   = y;
+            }
+
+            if (x < 0 || y < 0 ||
+                    x >= message->imageWidth || y >= message->imageHeight) {
+                continue;
+            }
+            size_t iX = (size_t) x;
+            size_t iY = (size_t) y;
+            size_t index = iX + iY * message->imageWidth;
 
             double dx = (x - (iX + 0.5));
             double dy = (y - (iY + 0.5));
-            double dist = sqrt(dx * dx + dy * dy);
+            double dist = dx * dx + dy * dy;
 
             if (nearestDist[index] > dist) {
                 imageData[index]   = value;
@@ -357,10 +466,171 @@ int generate_image(const Settings* settings, OutputCoords* output) {
                 nearestDist[index] = dist;
             }
         }
-        break;
+        free(nearestDist);
+        break; }
     }
     free(latLonValues);
 
+    return output;
+}
+
+int generate_image(const Settings* settings, OutputCoords* output) {
+    int err = 0;
+
+    LogSettings logS = {
+        .verbose = settings->verbose,
+        .logName = settings->logName,
+    };
+    DownloadSettings downloadS = {
+        .verbose = settings->verbose,
+        .logName = settings->logName,
+        .gzipped = settings->gzipped,
+        .url     = settings->url,
+        .timeout = settings->timeout,
+    };
+    DownloadedData data = download_data(&downloadS);
+
+    for (size_t messageIndex = 0; messageIndex < settings->messageCount;
+            messageIndex++) {
+        MessageSettings* message = settings->messages + messageIndex;
+        ImageData imData = generate_image_data(message, data.gribStart,
+                data.totalSize, settings->verbose);
+
+        if (imData.error) {
+            continue;
+        }
+        double*   imageData = imData.imageData;
+        uint32_t* counts    = imData.counts;
+        output->latT = imData.coords.latT;
+        output->latB = imData.coords.latB;
+        output->lonL = imData.coords.lonL;
+        output->lonR = imData.coords.lonR;
+
+        png_image image;
+        memset(&image, 0, sizeof(image));
+        image.version = PNG_IMAGE_VERSION;
+        image.format = PNG_FORMAT_RGBA;
+        image.width  = message->imageWidth;
+        image.height = message->imageHeight;
+        image.flags = 0;
+
+        uint8_t* imageBuffer = NULL;
+        imageBuffer = malloc(PNG_IMAGE_SIZE(image));
+        if (imageBuffer == NULL) {
+            return 1;
+        }
+
+        _log(&logS, "Rendering Image");
+
+        for (size_t i = 0; i < message->imageWidth * message->imageHeight; i++) {
+            if (counts[i] == 0) {
+                imageBuffer[i * 4 + 0] = 0;
+                imageBuffer[i * 4 + 1] = 0;
+                imageBuffer[i * 4 + 2] = 0;
+                imageBuffer[i * 4 + 3] = 0;
+            } else {
+                double value = imageData[i] / counts[i];
+
+                color_table_get(message->palette, value, imageBuffer + i * 4);
+            }
+        }
+
+        free(imageData);
+        free(counts);
+
+        if (png_image_write_to_file(&image,
+                                    message->imageFile,
+                                    0,
+                                    imageBuffer,
+                                    0,
+                                    NULL) == 0) {
+            fprintf(stderr, "Did not write image\n");
+        }
+
+        png_image_free(&image);
+        free(imageBuffer);
+    }
+
+    free(data.data);
+
+    return 0;
+}
+
+int generate_mrms_typed_refl(const MRMSTypedReflSettings* settings,
+                             OutputCoords* output) {
+    LogSettings logS = {
+        .verbose = settings->verbose,
+        .logName = settings->title,
+    };
+
+    DownloadSettings downloadS1 = {
+        .verbose = settings->verbose,
+        .logName = settings->title,
+        .gzipped = settings->gzipped,
+        .url     = settings->reflUrl,
+        .timeout = settings->timeout,
+    };
+    DownloadedData data1 = download_data(&downloadS1);
+    if (data1.error) {
+        return 1;
+    }
+    MessageSettings message1 = {
+        .imageFile   = "",
+        .palette     = NULL,
+        .imageWidth  = settings->imageWidth,
+        .imageHeight = settings->imageHeight,
+        .title       = settings->title,
+        .mode        = settings->mode,
+        .offset      = 0,
+    };
+    ImageData reflData = generate_image_data(&message1, data1.gribStart,
+            data1.totalSize, settings->verbose);
+    free(data1.data);
+    if (reflData.error) {
+        return 1;
+    }
+
+    DownloadSettings downloadS2 = {
+        .verbose = settings->verbose,
+        .logName = settings->title,
+        .gzipped = settings->gzipped,
+        .url     = settings->typeUrl,
+        .timeout = settings->timeout,
+    };
+    MessageSettings message2 = {
+        .imageFile   = "",
+        .palette     = NULL,
+        .imageWidth  = settings->imageWidth,
+        .imageHeight = settings->imageHeight,
+        .title       = settings->title,
+        .mode        = Nearest_Fast_Data,
+        .offset      = 0,
+    };
+    DownloadedData data2 = download_data(&downloadS2);
+    if (data2.error) {
+        return 1;
+    }
+    ImageData typeData = generate_image_data(&message2, data2.gribStart,
+            data2.totalSize, settings->verbose);
+    free(data2.data);
+    if (typeData.error) {
+        return 1;
+    }
+
+    if (fabs(reflData.coords.latT - typeData.coords.latT) > 0.00001 ||
+        fabs(reflData.coords.latB - typeData.coords.latB) > 0.00001 ||
+        fabs(reflData.coords.lonL - typeData.coords.lonL) > 0.00001 ||
+        fabs(reflData.coords.lonR - typeData.coords.lonR) > 0.00001 ) {
+        fprintf(stderr, "Reflectivity and precipitation type lat/lons did not match.\n");
+        return 1;
+    }
+
+    output->latT = reflData.coords.latT;
+    output->latB = reflData.coords.latB;
+    output->lonL = reflData.coords.lonL;
+    output->lonR = reflData.coords.lonR;
+
+    png_image image;
     memset(&image, 0, sizeof(image));
     image.version = PNG_IMAGE_VERSION;
     image.format = PNG_FORMAT_RGBA;
@@ -368,28 +638,88 @@ int generate_image(const Settings* settings, OutputCoords* output) {
     image.height = settings->imageHeight;
     image.flags = 0;
 
+    uint8_t* imageBuffer = NULL;
     imageBuffer = malloc(PNG_IMAGE_SIZE(image));
     if (imageBuffer == NULL) {
         return 1;
     }
 
-    _log(settings, "Rendering Image");
+    _log(&logS, "Rendering Image");
 
-    for (i = 0; i < settings->imageWidth * settings->imageHeight; i++) {
-        if (counts[i] == 0) {
+    for (size_t i = 0; i < settings->imageWidth * settings->imageHeight; i++) {
+        if (reflData.counts[i] == 0 || typeData.counts[i] == 0) {
             imageBuffer[i * 4 + 0] = 0;
             imageBuffer[i * 4 + 1] = 0;
             imageBuffer[i * 4 + 2] = 0;
             imageBuffer[i * 4 + 3] = 0;
         } else {
-            double value = imageData[i] / counts[i];
+            double value = reflData.imageData[i] / reflData.counts[i];
+            double type  = typeData.imageData[i];
 
-            color_table_get(settings->palette, value, imageBuffer + i * 4);
+            if (type < 0.9) {
+                imageBuffer[i * 4 + 0] = 0;
+                imageBuffer[i * 4 + 1] = 0;
+                imageBuffer[i * 4 + 2] = 0;
+                imageBuffer[i * 4 + 3] = 0;
+            } else if (type < 1.9) {
+                color_table_get(settings->rainPalette, value,
+                                imageBuffer + i * 4);
+            } else if (type < 2.9) {
+                imageBuffer[i * 4 + 0] = 0;
+                imageBuffer[i * 4 + 1] = 0;
+                imageBuffer[i * 4 + 2] = 0;
+                imageBuffer[i * 4 + 3] = 0;
+            } else if (type < 3.9) {
+                color_table_get(settings->snowPalette, value,
+                                imageBuffer + i * 4);
+            } else if (type < 5.9) {
+                imageBuffer[i * 4 + 0] = 0;
+                imageBuffer[i * 4 + 1] = 0;
+                imageBuffer[i * 4 + 2] = 0;
+                imageBuffer[i * 4 + 3] = 0;
+            } else if (type < 6.9) {
+                color_table_get(settings->rainPalette, value,
+                                imageBuffer + i * 4);
+            } else if (type < 7.9) {
+                color_table_get(settings->hailPalette, value,
+                                imageBuffer + i * 4);
+            } else if (type < 9.9) {
+                imageBuffer[i * 4 + 0] = 0;
+                imageBuffer[i * 4 + 1] = 0;
+                imageBuffer[i * 4 + 2] = 0;
+                imageBuffer[i * 4 + 3] = 0;
+            } else if (type < 10.9) {
+                color_table_get(settings->rainPalette, value,
+                                imageBuffer + i * 4);
+            } else if (type < 90.9) {
+                imageBuffer[i * 4 + 0] = 0;
+                imageBuffer[i * 4 + 1] = 0;
+                imageBuffer[i * 4 + 2] = 0;
+                imageBuffer[i * 4 + 3] = 0;
+            } else if (type < 91.9) {
+                color_table_get(settings->rainPalette, value,
+                                imageBuffer + i * 4);
+            } else if (type < 95.9) {
+                imageBuffer[i * 4 + 0] = 0;
+                imageBuffer[i * 4 + 1] = 0;
+                imageBuffer[i * 4 + 2] = 0;
+                imageBuffer[i * 4 + 3] = 0;
+            } else if (type < 96.9) {
+                color_table_get(settings->rainPalette, value,
+                                imageBuffer + i * 4);
+            } else {
+                imageBuffer[i * 4 + 0] = 0;
+                imageBuffer[i * 4 + 1] = 0;
+                imageBuffer[i * 4 + 2] = 0;
+                imageBuffer[i * 4 + 3] = 0;
+            }
         }
     }
 
-    free(imageData);
-    free(counts);
+    free(reflData.imageData);
+    free(reflData.counts);
+    free(typeData.imageData);
+    free(typeData.counts);
 
     if (png_image_write_to_file(&image,
                                 settings->imageFile,

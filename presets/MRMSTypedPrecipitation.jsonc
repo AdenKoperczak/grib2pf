@@ -1,0 +1,20 @@
+[
+    {
+        "mainType": "MRMSTypedReflectivity",
+        "aws": true,
+        "product": "",
+        "typeProduct": "CONUS/PrecipFlag_00.00/",
+        "reflProduct": "CONUS/MergedBaseReflectivity_00.50/",
+        "imageFile": "{_internal}/mrms_typed_ref.png",
+        "placeFile": "{_internal}/mrms_typed_ref.txt",
+        "rainPalette": "{_internal}/palettes/wct/DR.pal",
+        "snowPalette": "{_internal}/palettes/snow.pal",
+        "hailPalette": "{_internal}/palettes/wct/DR.pal",
+        "title": "MRMS Typed Reflectivity",
+        "refresh": 15,
+        "verbose": true,
+        "pullPeriod": 10,
+        "gzipped": true,
+        "renderMode": "Average_Data"
+    }
+]
