@@ -35,10 +35,10 @@ class ColorTable(Structure):
     ]
 
     COMBINE_SPACES_REGEX = re.compile(r"  +")
-    def __init__(self, filename = None):
+    def __init__(self, filename = None, extraLogs = False):
         Structure.__init__(self)
-        self.scale  = 1
-        self.offset = 0
+        self.scale  = c_double(1)
+        self.offset = c_double(0)
         self.step   = None
         self.rf     = (0, 0, 0, 0)
 
@@ -78,17 +78,23 @@ class ColorTable(Structure):
                         name, _, value = commentless.partition(":")
                         value = value.strip()
                         if len(value) == 0:
-                            raise Exception(f"Could not parse color table")
+                            print("Could not parse color table")
+                            continue
 
                         name = name.lower()
                         if name == "product":
-                            continue
+                            if extraLogs:
+                                print(name, value)
                         elif name == "units":
-                            continue
+                            if extraLogs:
+                                print(name, value)
+                        elif name == "decimals":
+                            if extraLogs:
+                                print(name, value)
                         elif name == "scale":
-                            self.scale = float(value)
+                            self.scale = c_double(float(value))
                         elif name == "offset":
-                            self.offset = float(value)
+                            self.offset = c_double(float(value))
                         elif name == "step":
                             self.step = float(value)
                         elif name == "rf":
@@ -104,7 +110,7 @@ class ColorTable(Structure):
                             color = self._parse_color(value, "color4", False)
                             values.append(color + color[1:])
                         else:
-                            raise Exception(f"Unknown name {repr(name)}")
+                            print(f"Unknown name {repr(name)}")
                     except Exception as e:
                         e.add_note(f"in color table {repr(filename)}, line {i + 1}\n{line}")
                         raise e
