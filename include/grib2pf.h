@@ -12,6 +12,8 @@ typedef enum RenderMode {
     Average_Data = 0,
     Nearest_Data = 1,
     Nearest_Fast_Data = 2,
+    Max_Data = 3,
+    Min_Data = 4,
 } RenderMode;
 
 typedef struct {
@@ -21,6 +23,7 @@ typedef struct {
     size_t imageHeight;
     const char* title;
     /*RenderMode*/int mode;
+    double minimum;
 
     size_t offset;
 } MessageSettings;
@@ -48,6 +51,7 @@ typedef struct {
     const ColorTable* rainPalette;
     const ColorTable* snowPalette;
     const ColorTable* hailPalette;
+    double minimum;
     size_t imageWidth;
     size_t imageHeight;
     /*RenderMode*/int mode;

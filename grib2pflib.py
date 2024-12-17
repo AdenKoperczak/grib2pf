@@ -165,6 +165,9 @@ class ColorTable(Structure):
 RenderModes = {
     "Average_Data": 0,
     "Nearest_Data": 1,
+    "Nearest_Fast_Data": 2,
+    "Max_Data": 3,
+    "Min_Data": 4,
 }
 
 class MessageSettings(Structure):
@@ -175,11 +178,12 @@ class MessageSettings(Structure):
         ("imageHeight", c_size_t),
         ("title", c_char_p),
         ("mode", c_int),
+        ("minimum", c_double),
         ("offset", c_size_t),
     ]
 
     def set(self, imageFile, palette, imageWidth, imageHeight, title,
-                 mode, offset):
+                 mode, offset, minimum):
 
         if isinstance(mode, str):
             mode = RenderModes[mode]
@@ -196,6 +200,7 @@ class MessageSettings(Structure):
         self.title       = c_char_p(title.encode("utf-8"))
         self.mode        = c_int(mode)
         self.offset      = c_size_t(offset)
+        self.minimum     = c_double(minimum)
 
 class Settings(Structure):
     _fields_ = [
@@ -237,6 +242,7 @@ class MRMSTypedReflSettings(Structure):
         ("rainPalette", POINTER(ColorTable)),
         ("snowPalette", POINTER(ColorTable)),
         ("hailPalette", POINTER(ColorTable)),
+        ("minimum", c_double),
         ("imageWidth", c_size_t),
         ("imageHeight", c_size_t),
         ("mode", c_int),
@@ -246,6 +252,7 @@ class MRMSTypedReflSettings(Structure):
                  typeUrl,
                  reflUrl,
                  timeout,
+                 minimum,
                  title,
                  verbose,
                  gzipped,
@@ -287,6 +294,7 @@ class MRMSTypedReflSettings(Structure):
         self.rainPalette = pointer(self.rainPalette_)
         self.snowPalette = pointer(self.snowPalette_)
         self.hailPalette = pointer(self.hailPalette_)
+        self.minimum     = c_double(minimum)
         self.imageWidth  = c_size_t(imageWidth)
         self.imageHeight = c_size_t(imageHeight)
         self.mode        = c_int(mode)
