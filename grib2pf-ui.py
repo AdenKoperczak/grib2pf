@@ -217,6 +217,7 @@ class PlacefileEditor(QWidget):
         "gzipped":              True,
         "renderMode":           "Average_Data",
         "minimum":              -998,
+        "threshold":            0,
     }
 
     RENDER_MODES = [
@@ -268,6 +269,7 @@ class PlacefileEditor(QWidget):
             "gzipped":          QCheckBox(),
             "renderMode":       QComboBox(),
             "minimum":          QDoubleSpinBox(),
+            "threshold":        QDoubleSpinBox(),
         }
 
         self.dataWidgets["refresh"].setMinimum(15)
@@ -292,6 +294,10 @@ class PlacefileEditor(QWidget):
         self.dataWidgets["minimum"].setMaximum(9999999)
         self.dataWidgets["minimum"].setDecimals(4)
 
+        self.dataWidgets["threshold"].setMinimum(-9999999)
+        self.dataWidgets["threshold"].setMaximum(9999999)
+        self.dataWidgets["threshold"].setDecimals(4)
+
         self.dataWidgets["aws"].stateChanged.connect(self.change_enabled_callback)
 
         for name, value in self.RENDER_MODES:
@@ -315,6 +321,7 @@ class PlacefileEditor(QWidget):
             ("Image File", "imageFile", False, "The path to where the image (png) should be generated"),
             ("Place File", "placeFile", False, "The path to where the placefile should be generated"),
             ("Minimum", "minimum", True, "The minimum value which is considered valid."),
+            ("Threshold", "threshold", True, "The threshold value for the placefile"),
             ("Refresh (s)", "refresh", False, "How often Supercell-Wx should refresh the placefile. Often is OK for local files."),
             ("Regeneration Period", "regenerateTime", False, "How often the placefile should be regenerated."),
             ("Pull Period", "pullPeriod", False, "How often AWS should be pulled for new data."),
