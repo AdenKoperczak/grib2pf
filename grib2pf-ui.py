@@ -2,7 +2,7 @@
 from PySide6.QtWidgets import QApplication, QLabel, QWidget, QGridLayout, \
         QLineEdit, QCheckBox, QSpinBox, QHBoxLayout, QVBoxLayout, QToolButton, \
         QPushButton, QFileDialog, QTableView, QMessageBox, QInputDialog, \
-        QComboBox, QDialog, QTreeView
+        QComboBox, QDialog, QTreeView, QDoubleSpinBox
 from PySide6.QtCore import Qt, Signal, QModelIndex, QAbstractTableModel, \
         QMimeData, QSortFilterProxyModel, QThread
 from PySide6.QtGui import QKeySequence, QClipboard, QIcon, QStandardItemModel, \
@@ -215,13 +215,17 @@ class PlacefileEditor(QWidget):
         "regenerateTime":       60,
         "pullPeriod":           10,
         "gzipped":              True,
-        "renderMode":           "Average_Data"
+        "renderMode":           "Average_Data",
+        "minimum":              -998,
+        "threshold":            0,
     }
 
     RENDER_MODES = [
         ["Averaging", "Average_Data"],
         ["Nearest", "Nearest_Data"],
-        ["Nearest", "Nearest_Fast_Data"],
+        ["Nearest Fast", "Nearest_Fast_Data"],
+        ["Maximum", "Max_Data"],
+        ["Minimum", "Min_Data"],
     ]
     MAIN_TYPES = [
         ["Basic", "basic"],
@@ -264,6 +268,8 @@ class PlacefileEditor(QWidget):
             "pullPeriod":       QSpinBox(),
             "gzipped":          QCheckBox(),
             "renderMode":       QComboBox(),
+            "minimum":          QDoubleSpinBox(),
+            "threshold":        QDoubleSpinBox(),
         }
 
         self.dataWidgets["refresh"].setMinimum(15)
@@ -284,6 +290,14 @@ class PlacefileEditor(QWidget):
         self.dataWidgets["timeout"].setMinimum(1)
         self.dataWidgets["timeout"].setMaximum(60)
 
+        self.dataWidgets["minimum"].setMinimum(-9999999)
+        self.dataWidgets["minimum"].setMaximum(9999999)
+        self.dataWidgets["minimum"].setDecimals(4)
+
+        self.dataWidgets["threshold"].setMinimum(-9999999)
+        self.dataWidgets["threshold"].setMaximum(9999999)
+        self.dataWidgets["threshold"].setDecimals(4)
+
         self.dataWidgets["aws"].stateChanged.connect(self.change_enabled_callback)
 
         for name, value in self.RENDER_MODES:
@@ -298,6 +312,7 @@ class PlacefileEditor(QWidget):
         view = [
             ("Title", "title", False, "The title to be used in Supercell-Wx for this Placefile"),
             ("Type of Product", "mainType", False, "The type of product to produce."),
+            ("Render Mode", "renderMode", False, "How data is transformed into an image."),
             ("AWS", "aws", False, "Pull from AWS instead of a URL. Recommended."),
             ("Product", "product", False, "The product to pull from AWS."),
             ("Precipitation Flag Product", "typeProduct", False, "The product to pull from AWS."),
@@ -305,6 +320,8 @@ class PlacefileEditor(QWidget):
             ("URL", "url", False, "The URL to pull the GRIB/MRMS data from."),
             ("Image File", "imageFile", False, "The path to where the image (png) should be generated"),
             ("Place File", "placeFile", False, "The path to where the placefile should be generated"),
+            ("Minimum", "minimum", True, "The minimum value which is considered valid."),
+            ("Threshold", "threshold", True, "The threshold value for the placefile"),
             ("Refresh (s)", "refresh", False, "How often Supercell-Wx should refresh the placefile. Often is OK for local files."),
             ("Regeneration Period", "regenerateTime", False, "How often the placefile should be regenerated."),
             ("Pull Period", "pullPeriod", False, "How often AWS should be pulled for new data."),
@@ -318,7 +335,6 @@ class PlacefileEditor(QWidget):
             ("Gzipped", "gzipped", False, "If the GRIB file is Gzip compressed. True for MRMS"),
             ("Verbose", "verbose", False, "If grib2pf should 'print' out information"),
             ("Timeout", "timeout", True, "The time grib2pf should wait for a response from the URL."),
-            ("Render Mode", "renderMode", False, "How data is transformed into an image. Average is better for most data. Nearest is better for digital data like precipitation flags."),
         ]
 
         for i, (text, name, optional, tooltip) in enumerate(view):
@@ -381,6 +397,8 @@ class PlacefileEditor(QWidget):
             elif isinstance(widget, QComboBox):
                 index = widget.findData(value)
                 widget.setCurrentIndex(index)
+            elif isinstance(widget, QDoubleSpinBox):
+                widget.setValue(value)
 
             if name in self.enableWidgets:
                 self.enableWidgets[name].setChecked(enabled)
@@ -408,6 +426,8 @@ class PlacefileEditor(QWidget):
                 settings[name] = widget.get_product()
             elif isinstance(widget, QComboBox):
                 settings[name] = widget.currentData()
+            elif isinstance(widget, QDoubleSpinBox):
+                settings[name] = widget.value()
         return settings
 
 class FilePicker(QWidget):

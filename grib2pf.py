@@ -56,6 +56,7 @@ class GRIBPlacefile:
             height = 1080,
             verbose = False,
             timeout = 30,
+            minimum = -998,
             mode = "Nearest_Data",
             threshold = 0):
 
@@ -73,6 +74,7 @@ class GRIBPlacefile:
         self.height = height
         self.verbose = verbose
         self.timeout = timeout
+        self.minimum = minimum
         self.mode = mode
         self.threshold = threshold
 
@@ -93,6 +95,7 @@ class GRIBPlacefile:
                                 "title": self.title,
                                 "mode": self.mode,
                                 "offset": 0,
+                                "minimum": self.minimum,
                             }])
         lib = Grib2PfLib()
         err, lonL, lonR, latT, latB = lib.generate_image(settings)
@@ -161,6 +164,7 @@ class MRMSTypedReflectivityPlacefile:
             "typeUrl":     settings.get("typeUrl", None),
             "reflUrl":     settings.get("reflUrl", None),
             "timeout":     settings.get("timeout", 30),
+            "minimum":     settings.get("minimum", -998),
             "title":       settings.get("title", None),
             "verbose":     settings.get("verbose", False),
             "gzipped":     settings.get("gzipped", False),
@@ -260,6 +264,7 @@ async def run_setting(settings):
                 settings.get("imageHeight", 1080),
                 settings.get("verbose", False),
                 settings.get("timeout", 30),
+                settings.get("minimum", -998),
                 settings.get("renderMode", "Average_Data"),
                 settings.get("threshold", 0))
 

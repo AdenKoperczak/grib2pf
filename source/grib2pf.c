@@ -376,6 +376,10 @@ ImageData generate_image_data(MessageSettings* message, uint8_t* d, size_t size,
             double lon   = latLonValues[i + 1];
             double value = latLonValues[i + 2];
 
+            if (value < message->minimum) {
+                continue;
+            }
+
             double x = (lon - lonL) * xM;
             double y;
             if (lat == lastLat) {
@@ -438,6 +442,10 @@ ImageData generate_image_data(MessageSettings* message, uint8_t* d, size_t size,
             double lon   = latLonValues[i + 1];
             double value = latLonValues[i + 2];
 
+            if (value < message->minimum) {
+                continue;
+            }
+
             double x = (lon - lonL) * xM;
             double y;
             if (lat == lastLat) {
@@ -467,6 +475,76 @@ ImageData generate_image_data(MessageSettings* message, uint8_t* d, size_t size,
             }
         }
         free(nearestDist);
+        break; }
+    case Max_Data: {
+        for (size_t i = 0; i < latLonValuesSize; i += 3) {
+            double lat   = latLonValues[i + 0];
+            double lon   = latLonValues[i + 1];
+            double value = latLonValues[i + 2];
+
+            if (value < message->minimum) {
+                continue;
+            }
+
+            double x = (lon - lonL) * xM;
+            double y;
+            if (lat == lastLat) {
+                y = lastY;
+            } else {
+                y = (PROJECT_LAT_Y(lat) - yB) * yM;
+                lastLat = lat;
+                lastY   = y;
+            }
+
+            if (x < 0 || y < 0 ||
+                    x >= message->imageWidth || y >= message->imageHeight) {
+                continue;
+            }
+            size_t iX = (size_t) x;
+            size_t iY = (size_t) y;
+            size_t index = iX + iY * message->imageWidth;
+
+            if (imageData[index] < value || counts[index] == 0) {
+                imageData[index]   = value;
+                counts[index]      = 1;
+            }
+        }
+
+        break; }
+    case Min_Data: {
+        for (size_t i = 0; i < latLonValuesSize; i += 3) {
+            double lat   = latLonValues[i + 0];
+            double lon   = latLonValues[i + 1];
+            double value = latLonValues[i + 2];
+
+            if (value < message->minimum) {
+                continue;
+            }
+
+            double x = (lon - lonL) * xM;
+            double y;
+            if (lat == lastLat) {
+                y = lastY;
+            } else {
+                y = (PROJECT_LAT_Y(lat) - yB) * yM;
+                lastLat = lat;
+                lastY   = y;
+            }
+
+            if (x < 0 || y < 0 ||
+                    x >= message->imageWidth || y >= message->imageHeight) {
+                continue;
+            }
+            size_t iX = (size_t) x;
+            size_t iY = (size_t) y;
+            size_t index = iX + iY * message->imageWidth;
+
+            if (imageData[index] > value || counts[index] == 0) {
+                imageData[index]   = value;
+                counts[index]      = 1;
+            }
+        }
+
         break; }
     }
     free(latLonValues);
@@ -582,6 +660,7 @@ int generate_mrms_typed_refl(const MRMSTypedReflSettings* settings,
         .title       = settings->title,
         .mode        = settings->mode,
         .offset      = 0,
+        .minimum     = settings->minimum,
     };
     ImageData reflData = generate_image_data(&message1, data1.gribStart,
             data1.totalSize, settings->verbose);
@@ -605,6 +684,7 @@ int generate_mrms_typed_refl(const MRMSTypedReflSettings* settings,
         .title       = settings->title,
         .mode        = Nearest_Fast_Data,
         .offset      = 0,
+        .minimum     = -1,
     };
     DownloadedData data2 = download_data(&downloadS2);
     if (data2.error) {
