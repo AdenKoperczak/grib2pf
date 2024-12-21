@@ -15,13 +15,120 @@ import sys
 import os
 import random
 import subprocess
+import csv
 
 location = os.path.split(__file__)[0]
 
 MIME_TYPE = "application/x.grib2pf-placefile"
 
 
-class ProductsDialog(QDialog):
+class HRRRProductsDialog(QDialog):
+    def __init__(self):
+        QDialog.__init__(self)
+
+        self.selectedProduct = ""
+
+        self.products = {
+            "conus": [],
+            "alaska": [],
+        }
+        with open(os.path.join(location, "hrrr_wrfsfcf01_products.csv")) as file:
+            reader = csv.reader(file)
+            for row in reader:
+                self.products["conus"].append(list(row))
+                self.products["alaska"].append(list(row))
+
+        self.mainLayout = QVBoxLayout(self)
+        self.bottomLayout = QHBoxLayout()
+
+        self.model = QStandardItemModel()
+        self.proxyModel = QSortFilterProxyModel()
+
+        self.proxyModel.setSourceModel(self.model)
+        self.proxyModel.setFilterCaseSensitivity(Qt.CaseInsensitive)
+        self.proxyModel.setFilterKeyColumn(1)
+        self.proxyModel.setSortCaseSensitivity(Qt.CaseInsensitive)
+
+        self.infoBox          = QLabel()
+        self.locationComboBox = QComboBox()
+        self.mainView         = QTreeView()
+        self.searchBar        = QLineEdit()
+        self.selectButton     = QPushButton("Select")
+        self.cancelButton     = QPushButton("Cancel")
+
+        self.locationComboBox.currentTextChanged.connect(self.location_selected)
+        self.selectButton.clicked.connect(self.select_pressed)
+        self.cancelButton.clicked.connect(self.reject)
+        self.searchBar.textChanged.connect(self.update_search)
+
+        self.infoBox.setTextFormat(Qt.RichText)
+        self.infoBox.setOpenExternalLinks(True)
+        self.infoBox.setText("""
+        <table>
+            <tr>
+                <td>HRRR Table</td>
+                <td><a href="https://www.nco.ncep.noaa.gov/pmb/products/hrrr/hrrr.t00z.wrfsfcf00.grib2.shtml">https://www.nco.ncep.noaa.gov/pmb/products/hrrr/hrrr.t00z.wrfsfcf00.grib2.shtml</a></td>
+            </tr>
+        </table>
+        """)
+
+        self.mainView.setModel(self.proxyModel)
+        self.mainView.setSortingEnabled(True)
+        self.mainView.sortByColumn(0, Qt.AscendingOrder)
+
+        self.mainLayout.addWidget(self.infoBox)
+        self.mainLayout.addWidget(self.locationComboBox)
+        self.mainLayout.addWidget(self.mainView)
+
+        self.bottomLayout.addWidget(self.searchBar)
+        self.bottomLayout.addWidget(self.selectButton)
+        self.bottomLayout.addWidget(self.cancelButton)
+
+        self.mainLayout.addLayout(self.bottomLayout)
+
+        for loc in self.products.keys():
+            self.locationComboBox.addItem(loc)
+        self.locationComboBox.setCurrentText("CONUS")
+
+        self.setMinimumWidth(600)
+        self.setMinimumHeight(600)
+        self.setSizeGripEnabled(True)
+
+    def update_search(self, *args):
+        self.proxyModel.setFilterWildcard(self.searchBar.text())
+
+    def select_pressed(self, *args):
+        indexes = self.mainView.selectedIndexes()
+        if len(indexes) == 0:
+            self.reject()
+            return
+
+        index = self.proxyModel.mapToSource(indexes[0])
+
+        self.selectedProduct = {
+                "productId": self.model.item(index.row(), 1).text(),
+                "location":  self.locationComboBox.currentText(),
+                "fileType":  "wrfsfcf01",
+        }
+        self.accept()
+
+    def location_selected(self, *args):
+        self.model.clear()
+        data = self.products.get(self.locationComboBox.currentText(), {})
+
+        root = self.model.invisibleRootItem()
+
+        for prod, name in data:
+            name = QStandardItem(name)
+            prod = QStandardItem(prod)
+            name.setEditable(False)
+            prod.setEditable(False)
+            root.appendRow([name, prod])
+
+        self.model.setHorizontalHeaderLabels(["Product Name", "Product ID"])
+        self.mainView.resizeColumnToContents(0)
+
+class MRMSProductsDialog(QDialog):
     def __init__(self):
         QDialog.__init__(self)
 
@@ -127,28 +234,44 @@ class ProductsSelect(QWidget):
         self.mainLayout = QHBoxLayout(self)
         self.mainLayout.setContentsMargins(0, 0, 0, 0)
 
-        self.display = QLineEdit()
-        self.dialog  = ProductsDialog()
+        self.display      = QLineEdit()
+        self.mrmsDialog   = MRMSProductsDialog()
+        self.hrrrDialog   = HRRRProductsDialog()
         self.dialogButton = QToolButton()
 
         self.dialogButton.setText("...")
         self.dialogButton.clicked.connect(self.run_dialog)
 
+        self.display.setReadOnly(True)
+
         self.mainLayout.addWidget(self.display)
         self.mainLayout.addWidget(self.dialogButton)
 
+        self.set_data_type("mrms")
         self.set_product("")
 
+    def set_data_type(self, dataType):
+        self.dataType = dataType
+
+    def dialog(self):
+        if self.dataType == "mrms":
+            return self.mrmsDialog
+        elif self.dataType == "hrrr":
+            return self.hrrrDialog
+        else:
+            print("ProductSelect dialog called without setting data type")
+            return
+
     def set_product(self, text):
-        self.dialog.selectedProduct = text
-        self.display.setText(text)
+        self.dialog().selectedProduct = text
+        self.display.setText(str(text))
 
     def get_product(self):
-        return self.display.text()
+        return self.dialog().selectedProduct
 
     def run_dialog(self, *args):
-        self.dialog.exec()
-        self.set_product(self.dialog.selectedProduct)
+        self.dialog().exec()
+        self.set_product(self.dialog().selectedProduct)
 
 
 class FileInput(QWidget):
@@ -230,12 +353,8 @@ class PlacefileEditor(QWidget):
     MAIN_TYPES = [
         ["Basic", "basic"],
         ["MRMS Typed Reflectivity", "MRMSTypedReflectivity"],
+        ["HRRR", "HRRR"],
     ]
-
-    def _make_enabled_callback(self, widget, enabler):
-        def callback(*args, **kwargs):
-            widget.setEnabled(enabler.isChecked())
-        return callback
 
     def __init__(self, *args, **kwargs):
         QWidget.__init__(self, *args, **kwargs)
@@ -366,17 +485,24 @@ class PlacefileEditor(QWidget):
     TYPED_PREC_ONLY     = {"rainPalette", "snowPalette", "hailPalette",
                            "typeProduct", "reflProduct"}
     NOT_TYPED_PREC_ONLY = {"product", "palette", "url"}
+    NOT_HRRR            = {"gzipped"}
     def change_enabled_callback(self, *args):
-        aws = self.dataWidgets["aws"].isChecked()
+        hrrr      = self.dataWidgets["mainType"].currentData() == "HRRR"
         typedPrec = self.dataWidgets["mainType"].currentData() == "MRMSTypedReflectivity"
+        aws       = self.dataWidgets["aws"].isChecked() or hrrr or typedPrec
+
+        self.dataWidgets["product"].set_data_type("hrrr" if hrrr else "mrms")
 
         for name, widget in self.dataWidgets.items():
             s = (name in self.enableWidgets and not self.enableWidgets[name].isChecked()) or \
                 (name in self.AWS_ONLY and not aws) or \
                 (name in self.NOT_AWS_ONLY and aws) or \
                 (name in self.TYPED_PREC_ONLY and not typedPrec) or \
-                (name in self.NOT_TYPED_PREC_ONLY and typedPrec)
+                (name in self.NOT_TYPED_PREC_ONLY and typedPrec) or \
+                (name in self.NOT_HRRR and hrrr)
             widget.setEnabled(not s)
+
+
 
     def set_settings(self, settings):
         for name, widget in self.dataWidgets.items():
@@ -407,12 +533,7 @@ class PlacefileEditor(QWidget):
         settings = {}
         awsState = self.dataWidgets["aws"].isChecked()
         for name, widget in self.dataWidgets.items():
-            if name in self.enableWidgets and \
-               not self.enableWidgets[name].isChecked():
-                continue
-            elif awsState and name in self.NOT_AWS_ONLY:
-                continue
-            elif not awsState and name in self.AWS_ONLY:
+            if not widget.isEnabled():
                 continue
             if isinstance(widget, QLineEdit):
                 settings[name] = widget.text()

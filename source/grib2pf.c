@@ -91,6 +91,8 @@ size_t chunk_from_server(void *contents, size_t size, size_t nmemb, void *userp)
     DownloadingData* data = userp;
     size_t inputSize = size * nmemb;
 
+    LogSettings log = {.verbose = true, .logName = "test" };
+
     if (inputSize == 0) {
         fprintf(stderr, "Got empty response from the server\n");
         return 0;
@@ -99,7 +101,6 @@ size_t chunk_from_server(void *contents, size_t size, size_t nmemb, void *userp)
     if (data->finished) {
         fprintf(stderr, "Got more data after finished inflating\n");
     }
-
 
     if (data->gzipped) {
         data->strm.next_in  = contents;
@@ -134,19 +135,26 @@ size_t chunk_from_server(void *contents, size_t size, size_t nmemb, void *userp)
             }
         }
     } else {
-        while (data->out.size - data->out.current < size) {
-            uint8_t* ptr = realloc(data->out.data, data->out.size + CHUNCK_SIZE);
+        while (data->out.size - data->out.current < inputSize) {
+            size_t newSize;
+            if (data->out.size == 0) {
+                newSize = CHUNCK_SIZE;
+            } else {
+                newSize = data->out.size * 2;
+            }
+            uint8_t* ptr = realloc(data->out.data, newSize);
             if (ptr == NULL) {
                 fprintf(stderr, "Could not allocate buffer\n");
                 return CURL_WRITEFUNC_ERROR;
 
             }
             data->out.data = ptr;
-            data->out.size += CHUNCK_SIZE;
+            data->out.size = newSize;
         }
         memcpy(data->out.data + data->out.current, contents, inputSize);
         data->out.current += inputSize;
     }
+
 
     return inputSize;
 }
@@ -574,6 +582,7 @@ int generate_image(const Settings* settings, OutputCoords* output) {
         ImageData imData = generate_image_data(message, data.gribStart,
                 data.totalSize, settings->verbose);
 
+        logS.logName = message->title;
         if (imData.error) {
             continue;
         }
@@ -628,6 +637,7 @@ int generate_image(const Settings* settings, OutputCoords* output) {
         png_image_free(&image);
         free(imageBuffer);
     }
+    logS.logName = settings->logName;
 
     free(data.data);
 
