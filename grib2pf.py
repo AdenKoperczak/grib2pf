@@ -10,7 +10,7 @@ import multiprocessing
 from multiprocessing import Process
 import sys
 
-from aws import AWSHandler
+from aws import AWSHandler, AWSHRRRHandler
 from grib2pflib import Grib2PfLib, Settings, ColorTable, MRMSTypedReflSettings
 
 location = os.path.split(__file__)[0]
@@ -244,6 +244,128 @@ class MRMSTypedReflectivityPlacefile:
             t = time.strftime(TIME_FMT).format(format(round((time.time() % 1) * 1000), "0>3"))
             print(t, f"[{self.title}]", *args, **kwargs)
 
+class HRRRPlaceFiles:
+    def __init__(self, hrrrs):
+        self.hrrrs = hrrrs
+        self.proc  = None
+
+        self.timeout = 3600
+        self.logName = "HRRR " + hrrrs[0]["product"]["fileType"]
+        self.products = {}
+
+        for i, hrrr in enumerate(hrrrs):
+            self.timeout = min(hrrr.get("timeout", 30), self.timeout)
+            self.products[hrrr["product"]["productId"]] = i
+
+        self.aws = AWSHRRRHandler(self.hrrrs[0]["product"])
+        self.verbose = True
+
+    def _get_offsets(self, indexURL):
+        offsets = [-1] * len(self.hrrrs)
+        res = requests.get(indexURL, timeout = self.timeout)
+        for line in res.text.splitlines():
+            _, offset, date, ID = line.split(":", 3)
+            if ID in self.products:
+                offsets[self.products[ID]] = int(offset)
+
+        for i in range(len(offsets)):
+            if offsets[i] == -1:
+                self._log("Could not find a product")
+                offsets[i] = 0
+
+        return offsets
+
+    def _generate(self, url, indexURL):
+        self._log(f"Generating images")
+
+        offsets = self._get_offsets(indexURL)
+        messages = []
+        for hrrr, offset in zip(self.hrrrs, offsets):
+            messages.append({
+                "imageFile":   hrrr["imageFile"],
+                "palette":     hrrr.get("palette", None),
+                "imageWidth":  hrrr.get("imageWidth", 1920),
+                "imageHeight": hrrr.get("imageHeight", 1080),
+                "title":       hrrr.get("title", "HRRR Data"),
+                "mode":        hrrr.get("mode", "Nearest_Data"),
+                "minimum":     hrrr.get("minimum", -998),
+                "offset":      offset,
+                })
+
+        settings = Settings(
+                url = url,
+                gzipped = False,
+                timeout = self.timeout,
+                logName = self.logName,
+                verbose = True,
+                messages = messages
+            )
+
+        lib = Grib2PfLib()
+        err, lonL, lonR, latT, latB = lib.generate_image(settings)
+        if err:
+            self._log("Error generating image")
+            sys.exit(err)
+
+        latT = round(latT, 3)
+        latB = round(latB, 3)
+        lonL = round(lonL - 360, 3)
+        lonR = round(lonR - 360, 3)
+
+        for hrrr in self.hrrrs:
+            self._log(f"Generating placefile {hrrr['placeFile']}", title =
+                      hrrr.get("title", "HRRR Data"))
+
+            with open(hrrr["placeFile"], "w") as file:
+                file.write(PLACEFILE_TEMPLATE.format(
+                        title = hrrr.get("title", "HRRR Data"),
+                        refresh = hrrr.get("refresh", 15),
+                        imageURL = hrrr.get("imageURL", hrrr["imageFile"]),
+                        latT = latT,
+                        latB = latB,
+                        lonL = lonL,
+                        lonR = lonR,
+                        threshold = hrrr.get("threshold", 0),
+                    ))
+        self._log("Finished generating")
+        sys.exit(0)
+
+    def generate(self):
+        if not self.aws.update_key():
+            return
+
+        if self.proc is not None and self.proc.is_alive():
+            self._log("Killing old process. Likely failed to update.")
+            self.proc.kill()
+            self.proc.join()
+            self.proc.close()
+            self.proc = None
+        elif self.proc is not None:
+            print("clossing process")
+            self.proc.close()
+            self.proc = None
+
+        url      = self.aws.get_url(False)
+        indexURL = self.aws.get_url(True)
+
+        aws = self.aws
+        self.aws = None
+
+        self.proc = Process(target = self._generate, args = (url, indexURL),
+                            daemon = True)
+        self.proc.start()
+
+        self.aws = aws
+
+    def _log(self, *args, **kwargs):
+        if "title" in kwargs:
+            logName = kwargs.pop("title")
+        else:
+            logName = self.logName
+
+        if self.verbose:
+            t = time.strftime(TIME_FMT).format(format(round((time.time() % 1) * 1000), "0>3"))
+            print(t, f"[{logName}]", *args, **kwargs)
 
 async def run_setting(settings):
     mainType = settings.get("mainType", "basic")
@@ -311,13 +433,33 @@ async def run_setting(settings):
                 last = time.time()
                 placefile.generate()
 
+async def run_hrrrs(hrrrs):
+    placefile = HRRRPlaceFiles(hrrrs)
+    while True:
+        placefile.generate()
+        await asyncio.sleep(hrrrs[0].get("pullPeriod", 10))
+
 async def run_settings(settings):
     if isinstance(settings, dict):
         await run_setting(settings)
     elif isinstance(settings, list):
         async with asyncio.TaskGroup() as tg:
+            hrrrs = {}
             for setting in settings:
-                tg.create_task(run_setting(setting))
+                if setting.get("mainType", "") == "HRRR":
+                    location = setting["product"]["location"]
+                    fileType = setting["product"]["fileType"]
+
+                    hrrrs.setdefault(location, {})
+                    hrrrs[location].setdefault(fileType, [])
+
+                    hrrrs[location][fileType].append(setting)
+                else:
+                    tg.create_task(run_setting(setting))
+            if len(hrrrs) > 0:
+                for location in hrrrs.values():
+                    for fileType in location.values():
+                        tg.create_task(run_hrrrs(fileType))
 
 def main():
     import argparse
