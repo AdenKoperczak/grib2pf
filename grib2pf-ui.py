@@ -16,6 +16,7 @@ import os
 import random
 import subprocess
 import csv
+import re
 
 location = os.path.split(__file__)[0]
 
@@ -273,6 +274,137 @@ class ProductsSelect(QWidget):
         self.dialog().exec()
         self.set_product(self.dialog().selectedProduct)
 
+class AreaDialog(QDialog):
+    def __init__(self):
+        QDialog.__init__(self)
+        self.value = None
+
+        self.mainLayout = QVBoxLayout(self)
+        self.bottomLayout = QHBoxLayout()
+
+        self.infoBox          = QLabel()
+        self.firstCoord       = QLineEdit()
+        self.secondCoord      = QLineEdit()
+        self.display          = QLabel()
+        self.doneButton       = QPushButton("Done")
+        self.cancelButton     = QPushButton("Cancel")
+
+        self.doneButton.clicked.connect(self.accept)
+        self.cancelButton.clicked.connect(self.reject)
+        self.firstCoord.textChanged.connect(self.update)
+        self.secondCoord.textChanged.connect(self.update)
+
+        self.infoBox.setTextFormat(Qt.RichText)
+        self.infoBox.setOpenExternalLinks(True)
+        self.infoBox.setText("""
+            Paste the coordinates of 2 opposite corners of the area (one per box).<br>
+            The coordinates the mouse is over can be copied from Supercell Wx by pressing CTRL+C
+        """)
+
+        self.mainLayout.addWidget(self.infoBox)
+        self.mainLayout.addWidget(self.firstCoord)
+        self.mainLayout.addWidget(self.secondCoord)
+        self.mainLayout.addWidget(self.display)
+        self.bottomLayout.addWidget(self.doneButton)
+        self.bottomLayout.addWidget(self.cancelButton)
+        self.mainLayout.addLayout(self.bottomLayout)
+
+        self.update()
+
+    def update(self, *args):
+        try:
+            lat0, lon0 = re.split("[, ] *", self.firstCoord.text().strip())
+            lat1, lon1 = re.split("[, ] *", self.secondCoord.text().strip())
+            lat0 = float(lat0)
+            lon0 = float(lon0)
+            lat1 = float(lat1)
+            lon1 = float(lon1)
+            if lat0 == lat1 or lon0 == lon1:
+                raise Exception("Same Lat Lon")
+        except Exception as e:
+            self.doneButton.setEnabled(False)
+            self.display.setText("")
+            self.value = None
+        else:
+            self.value = {}
+            if lat0 > lat1:
+                self.value["top"] = lat0
+                self.value["bottom"] = lat1
+            else:
+                self.value["bottom"] = lat0
+                self.value["top"] = lat1
+            if lon0 > lon1:
+                self.value["right"] = lon0
+                self.value["left"] = lon1
+            else:
+                self.value["left"] = lon0
+                self.value["right"] = lon1
+
+            self.doneButton.setEnabled(True)
+            self.display.setText("{top}, {bottom}, {left}, {right}".format(**self.value))
+
+    def get_value(self):
+        return self.value
+
+class AreaInput(QWidget):
+    def __init__(self):
+        QWidget.__init__(self)
+
+        self.mainLayout = QHBoxLayout(self)
+        self.mainLayout.setContentsMargins(0, 0, 0, 0)
+
+        self.top          = QDoubleSpinBox()
+        self.bottom       = QDoubleSpinBox()
+        self.left         = QDoubleSpinBox()
+        self.right        = QDoubleSpinBox()
+
+        self.top.setToolTip("Top Latitude")
+        self.bottom.setToolTip("Bottom Latitude")
+        self.left.setToolTip("Left Longitude")
+        self.right.setToolTip("Right Longitude")
+
+        self.top.setMinimum(-90)
+        self.top.setMaximum(90)
+        self.top.setDecimals(6)
+        self.bottom.setMinimum(-90)
+        self.bottom.setMaximum(90)
+        self.bottom.setDecimals(6)
+        self.left.setMinimum(-180)
+        self.left.setMaximum(180)
+        self.left.setDecimals(6)
+        self.right.setMinimum(-180)
+        self.right.setMaximum(180)
+        self.right.setDecimals(6)
+
+        self.dialog = AreaDialog()
+        self.dialogButton = QToolButton()
+        self.dialogButton.setText("...")
+        self.dialogButton.clicked.connect(self.show_dialog)
+
+        self.mainLayout.addWidget(self.top)
+        self.mainLayout.addWidget(self.bottom)
+        self.mainLayout.addWidget(self.left)
+        self.mainLayout.addWidget(self.right)
+        self.mainLayout.addWidget(self.dialogButton)
+
+    def set_value(self, value):
+        self.top.setValue(value["top"])
+        self.bottom.setValue(value["bottom"])
+        self.left.setValue(value["left"])
+        self.right.setValue(value["right"])
+
+    def get_value(self):
+        return {
+            "top": self.top.value(),
+            "bottom": self.bottom.value(),
+            "left": self.left.value(),
+            "right": self.right.value(),
+        }
+
+    def show_dialog(self):
+        if self.dialog.exec() == QDialog.Accepted:
+            self.set_value(self.dialog.get_value())
+
 
 class FileInput(QWidget):
     def __init__(self, *args, fileFilter, save, **kwargs):
@@ -389,6 +521,7 @@ class PlacefileEditor(QWidget):
             "renderMode":       QComboBox(),
             "minimum":          QDoubleSpinBox(),
             "threshold":        QDoubleSpinBox(),
+            "area":             AreaInput(),
         }
 
         self.dataWidgets["refresh"].setMinimum(15)
@@ -454,6 +587,7 @@ class PlacefileEditor(QWidget):
             ("Gzipped", "gzipped", False, "If the GRIB file is Gzip compressed. True for MRMS"),
             ("Verbose", "verbose", False, "If grib2pf should 'print' out information"),
             ("Timeout", "timeout", True, "The time grib2pf should wait for a response from the URL."),
+            ("Area", "area", True, "The area to generate the placefile for. Without this, it generates over the entire area covered by the GRIB data"),
         ]
 
         for i, (text, name, optional, tooltip) in enumerate(view):
@@ -525,6 +659,8 @@ class PlacefileEditor(QWidget):
                 widget.setCurrentIndex(index)
             elif isinstance(widget, QDoubleSpinBox):
                 widget.setValue(value)
+            elif isinstance(widget, AreaInput):
+                widget.set_value(value)
 
             if name in self.enableWidgets:
                 self.enableWidgets[name].setChecked(enabled)
@@ -549,6 +685,9 @@ class PlacefileEditor(QWidget):
                 settings[name] = widget.currentData()
             elif isinstance(widget, QDoubleSpinBox):
                 settings[name] = widget.value()
+            elif isinstance(widget, AreaInput):
+                settings[name] = widget.get_value()
+
         return settings
 
 class FilePicker(QWidget):

@@ -240,10 +240,10 @@ class MessageSettings(Structure):
         else:
             self.customArea = c_bool(True)
             self.area       = ImageArea()
-            self.area.latT  = area[0]
-            self.area.latB  = area[1]
-            self.area.lonL  = area[2]
-            self.area.lonR  = area[3]
+            self.area.latT  = area["top"]
+            self.area.latB  = area["bottom"]
+            self.area.lonL  = area["left"]
+            self.area.lonR  = area["right"]
 
         self.output = OutputImageAreas()
 
@@ -374,10 +374,10 @@ class MRMSTypedReflSettings(Structure):
         else:
             self.customArea = c_bool(True)
             self.area       = ImageArea()
-            self.area.latT  = area[0]
-            self.area.latB  = area[1]
-            self.area.lonL  = area[2]
-            self.area.lonR  = area[3]
+            self.area.latT  = area["top"]
+            self.area.latB  = area["bottom"]
+            self.area.lonL  = area["left"]
+            self.area.lonR  = area["right"]
 
     def set_url(self, typeUrl, reflUrl):
         self.typeUrl = c_char_p(typeUrl.encode("utf-8"))
