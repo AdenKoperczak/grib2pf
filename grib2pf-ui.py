@@ -401,10 +401,10 @@ class PlacefileEditor(QWidget):
         self.dataWidgets["pullPeriod"].setMaximum(3600 * 24 * 365)
 
         self.dataWidgets["imageWidth"].setMinimum(100)
-        self.dataWidgets["imageWidth"].setMaximum(2048)
+        self.dataWidgets["imageWidth"].setMaximum(4096)
 
         self.dataWidgets["imageHeight"].setMinimum(100)
-        self.dataWidgets["imageHeight"].setMaximum(2048)
+        self.dataWidgets["imageHeight"].setMaximum(4096)
 
         self.dataWidgets["timeout"].setMinimum(1)
         self.dataWidgets["timeout"].setMaximum(60)

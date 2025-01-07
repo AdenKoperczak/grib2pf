@@ -4,12 +4,20 @@ import os
 import sys
 from enum import IntEnum
 
-class OutputCoords(Structure):
+class ImageArea(Structure):
     _fields_ = [
         ("lonL", c_double),
         ("lonR", c_double),
         ("latT", c_double),
         ("latB", c_double),
+    ]
+
+class OutputImageAreas(Structure):
+    _fields_ = [
+        ("topLeftArea",     ImageArea),
+        ("topRightArea",    ImageArea),
+        ("bottomLeftArea",  ImageArea),
+        ("bottomRightArea", ImageArea),
     ]
 
 class ColorEntry(Structure):
@@ -172,18 +180,29 @@ RenderModes = {
 
 class MessageSettings(Structure):
     _fields_ = [
-        ("imageFile", c_char_p),
+        ("tiled", c_bool),
+        ("topLeftImageFile",     c_char_p),
+        ("topRightImageFile",    c_char_p),
+        ("bottomLeftImageFile",  c_char_p),
+        ("bottomRightImageFile", c_char_p),
+
         ("palette", POINTER(ColorTable)),
         ("imageWidth", c_size_t),
         ("imageHeight", c_size_t),
         ("title", c_char_p),
         ("mode", c_int),
         ("minimum", c_double),
+
+        ("customArea", c_bool),
+        ("area", ImageArea),
+
         ("offset", c_size_t),
+
+        ("output", OutputImageAreas),
     ]
 
-    def set(self, imageFile, palette, imageWidth, imageHeight, title,
-                 mode, offset, minimum):
+    def set(self, imageFiles, palette, imageWidth, imageHeight, title,
+                 mode, offset, minimum, area = None):
 
         if isinstance(mode, str):
             mode = RenderModes[mode]
@@ -193,7 +212,21 @@ class MessageSettings(Structure):
         else:
             self.palette_ = ColorTable(palette)
 
-        self.imageFile   = c_char_p(imageFile.encode("utf-8"))
+        if isinstance(imageFiles, str):
+            self.tiled = c_bool(False)
+            self.topLeftImageFile = c_char_p(imageFiles.encode("utf-8"))
+        elif len(imageFiles) == 1:
+            self.tiled = c_bool(False)
+            self.topLeftImageFile = c_char_p(imageFiles[0].encode("utf-8"))
+        elif len(imageFiles) == 4:
+            self.tiled = c_bool(True)
+            self.topLeftImageFile = c_char_p(imageFiles[0].encode("utf-8"))
+            self.topRightImageFile = c_char_p(imageFiles[1].encode("utf-8"))
+            self.bottomLeftImageFile = c_char_p(imageFiles[2].encode("utf-8"))
+            self.bottomRightImageFile = c_char_p(imageFiles[3].encode("utf-8"))
+        else:
+            raise ValueError("imageFiles must be a string list with 1 item, or list with 4 items")
+
         self.palette     = pointer(self.palette_)
         self.imageWidth  = c_size_t(imageWidth)
         self.imageHeight = c_size_t(imageHeight)
@@ -201,6 +234,19 @@ class MessageSettings(Structure):
         self.mode        = c_int(mode)
         self.offset      = c_size_t(offset)
         self.minimum     = c_double(minimum)
+        if area is None:
+            self.customArea = c_bool(False)
+            self.area       = ImageArea()
+        else:
+            self.customArea = c_bool(True)
+            self.area       = ImageArea()
+            self.area.latT  = area[0]
+            self.area.latB  = area[1]
+            self.area.lonL  = area[2]
+            self.area.lonR  = area[3]
+
+        self.output = OutputImageAreas()
+
 
 class Settings(Structure):
     _fields_ = [
@@ -238,7 +284,12 @@ class MRMSTypedReflSettings(Structure):
         ("verbose", c_bool),
         ("gzipped", c_bool),
 
-        ("imageFile", c_char_p),
+        ("tiled", c_bool),
+        ("topLeftImageFile",     c_char_p),
+        ("topRightImageFile",    c_char_p),
+        ("bottomLeftImageFile",  c_char_p),
+        ("bottomRightImageFile", c_char_p),
+
         ("rainPalette", POINTER(ColorTable)),
         ("snowPalette", POINTER(ColorTable)),
         ("hailPalette", POINTER(ColorTable)),
@@ -246,6 +297,9 @@ class MRMSTypedReflSettings(Structure):
         ("imageWidth", c_size_t),
         ("imageHeight", c_size_t),
         ("mode", c_int),
+
+        ("customArea", c_bool),
+        ("area", ImageArea),
     ]
 
     def __init__(self,
@@ -256,14 +310,30 @@ class MRMSTypedReflSettings(Structure):
                  title,
                  verbose,
                  gzipped,
-                 imageFile,
+                 imageFiles,
                  rainPalette,
                  snowPalette,
                  hailPalette,
                  imageWidth,
                  imageHeight,
-                 mode):
+                 mode,
+                 area):
         Structure.__init__(self)
+
+        if isinstance(imageFiles, str):
+            self.tiled = c_bool(False)
+            self.topLeftImageFile = c_char_p(imageFiles.encode("utf-8"))
+        elif len(imageFiles) == 1:
+            self.tiled = c_bool(False)
+            self.topLeftImageFile = c_char_p(imageFiles[0].encode("utf-8"))
+        elif len(imageFiles) == 4:
+            self.tiled = c_bool(True)
+            self.topLeftImageFile = c_char_p(imageFiles[0].encode("utf-8"))
+            self.topRightImageFile = c_char_p(imageFiles[1].encode("utf-8"))
+            self.bottomLeftImageFile = c_char_p(imageFiles[2].encode("utf-8"))
+            self.bottomRightImageFile = c_char_p(imageFiles[3].encode("utf-8"))
+        else:
+            raise ValueError("imageFiles must be a string list with 1 item, or list with 4 items")
 
         if isinstance(mode, str):
             mode = RenderModes[mode]
@@ -290,7 +360,6 @@ class MRMSTypedReflSettings(Structure):
         self.gzipped     = c_bool(gzipped)
         self.verbose     = c_bool(verbose)
 
-        self.imageFile   = c_char_p(imageFile.encode("utf-8"))
         self.rainPalette = pointer(self.rainPalette_)
         self.snowPalette = pointer(self.snowPalette_)
         self.hailPalette = pointer(self.hailPalette_)
@@ -298,6 +367,17 @@ class MRMSTypedReflSettings(Structure):
         self.imageWidth  = c_size_t(imageWidth)
         self.imageHeight = c_size_t(imageHeight)
         self.mode        = c_int(mode)
+
+        if area is None:
+            self.customArea = c_bool(False)
+            self.area       = ImageArea()
+        else:
+            self.customArea = c_bool(True)
+            self.area       = ImageArea()
+            self.area.latT  = area[0]
+            self.area.latB  = area[1]
+            self.area.lonL  = area[2]
+            self.area.lonR  = area[3]
 
     def set_url(self, typeUrl, reflUrl):
         self.typeUrl = c_char_p(typeUrl.encode("utf-8"))
@@ -334,19 +414,74 @@ class Grib2PfLib:
         if not isinstance(settings, Settings):
             raise TypeError("settings should be of type Settings")
 
-        output = OutputCoords()
+        err = self.lib.generate_image(byref(settings))
+        areas = []
+        for i in range(settings.messageCount):
+            areas.append({
+                "topLeftArea": {
+                    "lonL": round((settings.messages[i].output.topLeftArea.lonL - 180) % 360 - 180, 3),
+                    "lonR": round((settings.messages[i].output.topLeftArea.lonR - 180) % 360 - 180, 3),
+                    "latT": round(settings.messages[i].output.topLeftArea.latT, 3),
+                    "latB": round(settings.messages[i].output.topLeftArea.latB, 3),
+                },
+                "topRightArea": {
+                    "lonL": round((settings.messages[i].output.topRightArea.lonL - 180) % 360 - 180, 3),
+                    "lonR": round((settings.messages[i].output.topRightArea.lonR - 180) % 360 - 180, 3),
+                    "latT": round(settings.messages[i].output.topRightArea.latT, 3),
+                    "latB": round(settings.messages[i].output.topRightArea.latB, 3),
+                },
+                "bottomLeftArea": {
+                    "lonL": round((settings.messages[i].output.bottomLeftArea.lonL - 180) % 360 - 180, 3),
+                    "lonR": round((settings.messages[i].output.bottomLeftArea.lonR - 180) % 360 - 180, 3),
+                    "latT": round(settings.messages[i].output.bottomLeftArea.latT, 3),
+                    "latB": round(settings.messages[i].output.bottomLeftArea.latB, 3),
+                },
+                "bottomRightArea": {
+                    "lonL": round((settings.messages[i].output.bottomRightArea.lonL - 180) % 360 - 180, 3),
+                    "lonR": round((settings.messages[i].output.bottomRightArea.lonR - 180) % 360 - 180, 3),
+                    "latT": round(settings.messages[i].output.bottomRightArea.latT, 3),
+                    "latB": round(settings.messages[i].output.bottomRightArea.latB, 3),
+                },
+            })
 
-        err = self.lib.generate_image(byref(settings), byref(output))
-        return err, output.lonL, output.lonR, output.latT, output.latB
+        return err, areas
 
     def generate_mrms_typed_refl(self, settings):
         if not isinstance(settings, MRMSTypedReflSettings):
             raise TypeError("settings should be of type MRMSTypedReflSettings")
 
-        output = OutputCoords()
+        output = OutputImageAreas()
 
         err = self.lib.generate_mrms_typed_refl(byref(settings), byref(output))
-        return err, output.lonL, output.lonR, output.latT, output.latB
+
+        areas = {
+            "topLeftArea": {
+                "lonL": round((output.topLeftArea.lonL - 180) % 360 - 180, 3),
+                "lonR": round((output.topLeftArea.lonR - 180) % 360 - 180, 3),
+                "latT": round(output.topLeftArea.latT, 3),
+                "latB": round(output.topLeftArea.latB, 3),
+            },
+            "topRightArea": {
+                "lonL": round((output.topRightArea.lonL - 180) % 360 - 180, 3),
+                "lonR": round((output.topRightArea.lonR - 180) % 360 - 180, 3),
+                "latT": round(output.topRightArea.latT, 3),
+                "latB": round(output.topRightArea.latB, 3),
+            },
+            "bottomLeftArea": {
+                "lonL": round((output.bottomLeftArea.lonL - 180) % 360 - 180, 3),
+                "lonR": round((output.bottomLeftArea.lonR - 180) % 360 - 180, 3),
+                "latT": round(output.bottomLeftArea.latT, 3),
+                "latB": round(output.bottomLeftArea.latB, 3),
+            },
+            "bottomRightArea": {
+                "lonL": round((output.bottomRightArea.lonL - 180) % 360 - 180, 3),
+                "lonR": round((output.bottomRightArea.lonR - 180) % 360 - 180, 3),
+                "latT": round(output.bottomRightArea.latT, 3),
+                "latB": round(output.bottomRightArea.latB, 3),
+            },
+        }
+
+        return err, areas
 
 
 

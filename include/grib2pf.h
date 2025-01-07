@@ -6,7 +6,7 @@
 
 typedef struct {
     double lonL, lonR, latT, latB;
-} OutputCoords;
+} ImageArea;
 
 typedef enum RenderMode {
     Average_Data = 0,
@@ -17,7 +17,19 @@ typedef enum RenderMode {
 } RenderMode;
 
 typedef struct {
-    const char* imageFile;
+    ImageArea topLeftArea;
+    ImageArea topRightArea;
+    ImageArea bottomLeftArea;
+    ImageArea bottomRightArea;
+} OutputImageAreas;
+
+typedef struct {
+    bool tiled;
+    const char* topLeftImageFile;
+    const char* topRightImageFile;
+    const char* bottomLeftImageFile;
+    const char* bottomRightImageFile;
+
     const ColorTable* palette;
     size_t imageWidth;
     size_t imageHeight;
@@ -25,7 +37,12 @@ typedef struct {
     /*RenderMode*/int mode;
     double minimum;
 
+    bool customArea;
+    ImageArea area;
+
     size_t offset;
+
+    OutputImageAreas output;
 } MessageSettings;
 
 typedef struct {
@@ -47,7 +64,12 @@ typedef struct {
     bool verbose;
     bool gzipped;
 
-    const char* imageFile;
+    bool tiled;
+    const char* topLeftImageFile;
+    const char* topRightImageFile;
+    const char* bottomLeftImageFile;
+    const char* bottomRightImageFile;
+
     const ColorTable* rainPalette;
     const ColorTable* snowPalette;
     const ColorTable* hailPalette;
@@ -55,6 +77,9 @@ typedef struct {
     size_t imageWidth;
     size_t imageHeight;
     /*RenderMode*/int mode;
+
+    bool customArea;
+    ImageArea area;
 } MRMSTypedReflSettings;
 
 #if defined(GRIB2PF_LIBRARY) && defined(_WIN32)
@@ -63,9 +88,8 @@ typedef struct {
 #define GRIB2PF_LIB
 #endif
 
-GRIB2PF_LIB int generate_image(const Settings* settings, OutputCoords* output);
+GRIB2PF_LIB int generate_image(const Settings* settings);
 
 GRIB2PF_LIB int generate_mrms_typed_refl(const MRMSTypedReflSettings* settings,
-                             OutputCoords* output);
-
+                             OutputImageAreas* output);
 #endif
