@@ -80,8 +80,9 @@ jobs:
 
     - name: Make Executables
       shell: bash
-      cd source
-      pyinstaller grib2pf.spec
+      run: |
+        cd source
+        pyinstaller grib2pf.spec
 
     - name: Copy Files to Output
       shell: bash
