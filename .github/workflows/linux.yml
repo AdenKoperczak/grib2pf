@@ -32,7 +32,7 @@ jobs:
     - name: Setup Environment
       shell: bash
       run: |
-        sudo apt-get install libaec-dev libpng-dev libcurl4-dev
+        sudo apt-get install libaec-dev libpng-dev libcurl4-openssl-dev
 
     - name: Build grib2pf
       shell: bash
