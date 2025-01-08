@@ -56,7 +56,7 @@ jobs:
            source/hrrr_wrfsfcf00_products.csv \
            source/hrrr_wrfsfcf01_products.csv \
            source/examples \
-           source/pralettes \
+           source/palettes \
            source/presets \
            source/icon \
            grib2pf-advanced
