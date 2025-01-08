@@ -473,6 +473,7 @@ class PlacefileEditor(QWidget):
         "renderMode":           "Average_Data",
         "minimum":              -998,
         "threshold":            0,
+        "area":                 {"top": 0, "bottom": 0, "left": 0, "right": 0}
     }
 
     RENDER_MODES = [
