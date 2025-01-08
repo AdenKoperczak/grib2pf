@@ -41,7 +41,7 @@ jobs:
         cd source/build
         cmake .. \
           -D CMAKE_BUILD_TYPE=Release \
-          -D "CMAKE_BUILD_RPATH=." \
+          -D "CMAKE_BUILD_RPATH=."
         make -j4
 
     - name: Make grib2pf-advanced
