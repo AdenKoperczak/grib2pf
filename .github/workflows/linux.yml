@@ -94,10 +94,10 @@ jobs:
         cp -rv products.txt dist/grib2pf/_internal
         cp -rv hrrr_wrfsfcf00_products.csv dist/grib2pf/_internal
         cp -rv hrrr_wrfsfcf01_products.csv dist/grib2pf/_internal
-        cp -rv examples dist/grib2pf/examples -Recurse
-        cp -rv palettes dist/grib2pf/_internal/palettes -Recurse
-        cp -rv presets dist/grib2pf/_internal/presets -Recurse
-        cp -rv icon dist/grib2pf/_internal/icon -Recurse
+        cp -rv examples dist/grib2pf/examples
+        cp -rv palettes dist/grib2pf/_internal/palettes
+        cp -rv presets dist/grib2pf/_internal/presets
+        cp -rv icon dist/grib2pf/_internal/icon
 
     - name: Upload grib2pf Executable
       uses: actions/upload-artifact@v4
