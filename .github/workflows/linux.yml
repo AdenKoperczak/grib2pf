@@ -70,3 +70,36 @@ jobs:
       with:
         name: grib2pf-advanced
         path: ${{ github.workspace }}/dist
+
+    - name: Install pyinstaller and requirements.txt
+      shell: bash
+      run: |
+        cd source
+        pip install pyinstaller
+        pip install -r requirements.txt
+
+    - name: Make Executables
+      shell: bash
+      cd source
+      pyinstaller grib2pf.spec
+
+    - name: Copy Files to Output
+      shell: bash
+      run: |
+        cd source
+
+        cp -rv README.md dist/grib2pf/
+        cp -rv ACKNOWLEDGMENTS.md dist/grib2pf/
+        cp -rv products.txt dist/grib2pf/_internal
+        cp -rv hrrr_wrfsfcf00_products.csv dist/grib2pf/_internal
+        cp -rv hrrr_wrfsfcf01_products.csv dist/grib2pf/_internal
+        cp -rv examples dist/grib2pf/examples -Recurse
+        cp -rv palettes dist/grib2pf/_internal/palettes -Recurse
+        cp -rv presets dist/grib2pf/_internal/presets -Recurse
+        cp -rv icon dist/grib2pf/_internal/icon -Recurse
+
+    - name: Upload grib2pf Executable
+      uses: actions/upload-artifact@v4
+      with:
+        name: grib2pf
+        path: ${{ github.workspace }}/source/dist
