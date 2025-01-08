@@ -40,6 +40,44 @@ Image: "{imageURL}"
     {latB}, {lonL}, 0, 1
 End:
 """
+TILED_PLACEFILE_TEMPLATE = """
+Title: {title}
+RefreshSeconds: {refresh}
+Threshold: {threshold}
+
+Image: "{imageURLs[0]}"
+    {areas[topLeftArea][latT]}, {areas[topLeftArea][lonL]}, 0, 0
+    {areas[topLeftArea][latT]}, {areas[topLeftArea][lonR]}, 1, 0
+    {areas[topLeftArea][latB]}, {areas[topLeftArea][lonR]}, 1, 1
+    {areas[topLeftArea][latT]}, {areas[topLeftArea][lonL]}, 0, 0
+    {areas[topLeftArea][latB]}, {areas[topLeftArea][lonR]}, 1, 1
+    {areas[topLeftArea][latB]}, {areas[topLeftArea][lonL]}, 0, 1
+End:
+Image: "{imageURLs[1]}"
+    {areas[topRightArea][latT]}, {areas[topRightArea][lonL]}, 0, 0
+    {areas[topRightArea][latT]}, {areas[topRightArea][lonR]}, 1, 0
+    {areas[topRightArea][latB]}, {areas[topRightArea][lonR]}, 1, 1
+    {areas[topRightArea][latT]}, {areas[topRightArea][lonL]}, 0, 0
+    {areas[topRightArea][latB]}, {areas[topRightArea][lonR]}, 1, 1
+    {areas[topRightArea][latB]}, {areas[topRightArea][lonL]}, 0, 1
+End:
+Image: "{imageURLs[2]}"
+    {areas[bottomLeftArea][latT]}, {areas[bottomLeftArea][lonL]}, 0, 0
+    {areas[bottomLeftArea][latT]}, {areas[bottomLeftArea][lonR]}, 1, 0
+    {areas[bottomLeftArea][latB]}, {areas[bottomLeftArea][lonR]}, 1, 1
+    {areas[bottomLeftArea][latT]}, {areas[bottomLeftArea][lonL]}, 0, 0
+    {areas[bottomLeftArea][latB]}, {areas[bottomLeftArea][lonR]}, 1, 1
+    {areas[bottomLeftArea][latB]}, {areas[bottomLeftArea][lonL]}, 0, 1
+End:
+Image: "{imageURLs[3]}"
+    {areas[bottomRightArea][latT]}, {areas[bottomRightArea][lonL]}, 0, 0
+    {areas[bottomRightArea][latT]}, {areas[bottomRightArea][lonR]}, 1, 0
+    {areas[bottomRightArea][latB]}, {areas[bottomRightArea][lonR]}, 1, 1
+    {areas[bottomRightArea][latT]}, {areas[bottomRightArea][lonL]}, 0, 0
+    {areas[bottomRightArea][latB]}, {areas[bottomRightArea][lonR]}, 1, 1
+    {areas[bottomRightArea][latB]}, {areas[bottomRightArea][lonL]}, 0, 1
+End:
+"""
 
 class GRIBPlacefile:
     def __init__(
@@ -58,7 +96,8 @@ class GRIBPlacefile:
             timeout = 30,
             minimum = -998,
             mode = "Nearest_Data",
-            threshold = 0):
+            threshold = 0,
+            area = None):
 
         self.url = url
         self.imageFile = imageFile
@@ -77,18 +116,31 @@ class GRIBPlacefile:
         self.minimum = minimum
         self.mode = mode
         self.threshold = threshold
+        self.area = area
 
         self.proc = None
 
     def _generate(self):
         self._log(f"Generating image")
+        tiled = self.width > 2048 or self.height > 2048
+
+        if tiled:
+            imageFiles = [
+                self.imageFile.replace("{}", "TopLeft"),
+                self.imageFile.replace("{}", "TopRight"),
+                self.imageFile.replace("{}", "BottomLeft"),
+                self.imageFile.replace("{}", "BottomRight"),
+            ]
+        else:
+            imageFiles = [self.imageFile]
+
         settings = Settings(self.url,
                             self.gzipped,
                             self.verbose,
                             self.title,
                             self.timeout,
                             [{
-                                "imageFile": self.imageFile,
+                                "imageFiles": imageFiles,
                                 "palette": self.palette,
                                 "imageWidth": self.width,
                                 "imageHeight": self.height,
@@ -96,30 +148,49 @@ class GRIBPlacefile:
                                 "mode": self.mode,
                                 "offset": 0,
                                 "minimum": self.minimum,
+                                "area": self.area
                             }])
         lib = Grib2PfLib()
-        err, lonL, lonR, latT, latB = lib.generate_image(settings)
+        err, areas = lib.generate_image(settings)
         if err:
             sys.exit(err)
 
-        latT = round(latT, 3)
-        latB = round(latB, 3)
-        lonL = round(lonL - 360, 3)
-        lonR = round(lonR - 360, 3)
 
         self._log(f"Generating placefile {self.placeFile}")
+        if tiled:
+            imageURLs = [
+                self.imageURL.replace("{}", "TopLeft"),
+                self.imageURL.replace("{}", "TopRight"),
+                self.imageURL.replace("{}", "BottomLeft"),
+                self.imageURL.replace("{}", "BottomRight"),
+            ]
+            with open(self.placeFile, "w") as file:
+                file.write(TILED_PLACEFILE_TEMPLATE.format(
+                        title = self.title,
+                        refresh = self.refresh,
+                        imageURLs = imageURLs,
+                        areas = areas[0],
+                        threshold = self.threshold,
+                    ))
+        else:
+            area = areas[0]
+            latT = area["topLeftArea"]["latT"]
+            latB = area["topLeftArea"]["latB"]
+            lonL = area["topLeftArea"]["lonL"]
+            lonR = area["topLeftArea"]["lonR"]
 
-        with open(self.placeFile, "w") as file:
-            file.write(PLACEFILE_TEMPLATE.format(
-                    title = self.title,
-                    refresh = self.refresh,
-                    imageURL = self.imageURL,
-                    latT = latT,
-                    latB = latB,
-                    lonL = lonL,
-                    lonR = lonR,
-                    threshold = self.threshold,
-                ))
+
+            with open(self.placeFile, "w") as file:
+                file.write(PLACEFILE_TEMPLATE.format(
+                        title = self.title,
+                        refresh = self.refresh,
+                        imageURL = self.imageURL,
+                        latT = latT,
+                        latB = latB,
+                        lonL = lonL,
+                        lonR = lonR,
+                        threshold = self.threshold,
+                    ))
         self._log("Finished generating")
         sys.exit(0)
 
@@ -160,6 +231,18 @@ class MRMSTypedReflectivityPlacefile:
         self.placeFile = replace_location(settings.get("placeFile", ""))
         self.threshold = settings.get("threshold", 0)
 
+        imageFile = replace_location(settings.get("imageFile", None))
+        self.tiled = settings["imageWidth"] > 2048 or settings["imageHeight"] > 2048
+        if self.tiled:
+            imageFiles = [
+                imageFile.replace("{}", "TopLeft"),
+                imageFile.replace("{}", "TopRight"),
+                imageFile.replace("{}", "BottomLeft"),
+                imageFile.replace("{}", "BottomRight"),
+            ]
+        else:
+            imageFiles = [imageFile]
+
         self.settings = {
             "typeUrl":     settings.get("typeUrl", None),
             "reflUrl":     settings.get("reflUrl", None),
@@ -168,13 +251,14 @@ class MRMSTypedReflectivityPlacefile:
             "title":       settings.get("title", None),
             "verbose":     settings.get("verbose", False),
             "gzipped":     settings.get("gzipped", False),
-            "imageFile":   replace_location(settings.get("imageFile", None)),
+            "imageFiles":  imageFiles,
             "rainPalette": replace_location(settings.get("rainPalette", None)),
             "snowPalette": replace_location(settings.get("snowPalette", None)),
             "hailPalette": replace_location(settings.get("hailPalette", None)),
             "imageWidth":  settings.get("imageWidth", 1920),
             "imageHeight": settings.get("imageHeight", 1080),
-            "mode":        settings.get("mode", "Average_Data"),
+            "mode":        settings.get("renderMode", "Average_Data"),
+            "area":        settings.get("area", None),
         }
 
     def _generate(self):
@@ -182,28 +266,46 @@ class MRMSTypedReflectivityPlacefile:
 
         settings = MRMSTypedReflSettings(**self.settings)
         lib = Grib2PfLib()
-        err, lonL, lonR, latT, latB = lib.generate_mrms_typed_refl(settings)
+        err, areas = lib.generate_mrms_typed_refl(settings)
         if err:
+            self._log(f"Error generating image, {err}")
             sys.exit(err)
-
-        latT = round(latT, 3)
-        latB = round(latB, 3)
-        lonL = round(lonL - 360, 3)
-        lonR = round(lonR - 360, 3)
 
         self._log(f"Generating placefile {self.placeFile}")
 
-        with open(self.placeFile, "w") as file:
-            file.write(PLACEFILE_TEMPLATE.format(
-                    title = self.title,
-                    refresh = self.refresh,
-                    imageURL = self.imageURL,
-                    latT = latT,
-                    latB = latB,
-                    lonL = lonL,
-                    lonR = lonR,
-                    threshold = self.threshold,
-                ))
+        if self.tiled:
+            imageURLs = [
+                self.imageURL.replace("{}", "TopLeft"),
+                self.imageURL.replace("{}", "TopRight"),
+                self.imageURL.replace("{}", "BottomLeft"),
+                self.imageURL.replace("{}", "BottomRight"),
+            ]
+            with open(self.placeFile, "w") as file:
+                file.write(TILED_PLACEFILE_TEMPLATE.format(
+                        title = self.title,
+                        refresh = self.refresh,
+                        imageURLs = imageURLs,
+                        areas = areas,
+                        threshold = self.threshold,
+                    ))
+        else:
+            latT = areas["topLeftArea"]["latT"]
+            latB = areas["topLeftArea"]["latB"]
+            lonL = areas["topLeftArea"]["lonL"]
+            lonR = areas["topLeftArea"]["lonR"]
+
+            with open(self.placeFile, "w") as file:
+                file.write(PLACEFILE_TEMPLATE.format(
+                        title = self.title,
+                        refresh = self.refresh,
+                        imageURL = self.imageURL,
+                        latT = latT,
+                        latB = latB,
+                        lonL = lonL,
+                        lonR = lonR,
+                        threshold = self.threshold,
+                    ))
+
         self._log("Finished generating")
         sys.exit(0)
 
@@ -289,6 +391,7 @@ class HRRRPlaceFiles:
                 "title":       hrrr.get("title", "HRRR Data"),
                 "mode":        hrrr.get("mode", "Nearest_Data"),
                 "minimum":     hrrr.get("minimum", -998),
+                "area":        hrrr.get("area", None),
                 "offset":      offset,
                 })
 
@@ -302,19 +405,20 @@ class HRRRPlaceFiles:
             )
 
         lib = Grib2PfLib()
-        err, lonL, lonR, latT, latB = lib.generate_image(settings)
+        err, areas = lib.generate_image(settings)
         if err:
-            self._log("Error generating image")
+            self._log(f"Error generating image, {err}")
             sys.exit(err)
 
-        latT = round(latT, 3)
-        latB = round(latB, 3)
-        lonL = round(lonL - 360, 3)
-        lonR = round(lonR - 360, 3)
 
-        for hrrr in self.hrrrs:
+        for hrrr, area in zip(self.hrrrs, areas):
             self._log(f"Generating placefile {hrrr['placeFile']}", title =
                       hrrr.get("title", "HRRR Data"))
+
+            latT = area["topLeftArea"]["latT"]
+            latB = area["topLeftArea"]["latB"]
+            lonL = area["topLeftArea"]["lonL"]
+            lonR = area["topLeftArea"]["lonR"]
 
             with open(hrrr["placeFile"], "w") as file:
                 file.write(PLACEFILE_TEMPLATE.format(
@@ -388,7 +492,8 @@ async def run_setting(settings):
                 settings.get("timeout", 30),
                 settings.get("minimum", -998),
                 settings.get("renderMode", "Average_Data"),
-                settings.get("threshold", 0))
+                settings.get("threshold", 0),
+                settings.get("area", None))
 
         if settings.get("aws", False):
             awsHandler = AWSHandler(settings["product"])

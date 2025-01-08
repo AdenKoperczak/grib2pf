@@ -261,11 +261,20 @@ DownloadedData download_data(const DownloadSettings* settings) {
 }
 
 typedef struct {
-    OutputCoords coords;
+    ImageArea coords;
     double* imageData;
     uint32_t* counts;
     int error;
 } ImageData;
+
+double correct_alias(double a, double b) {
+    // Find the "alias number" for a and b
+    double Na = floor((a - 180) / 360) + 1;
+    double Nb = floor((b - 180) / 360) + 1;
+
+    // make b be on the same alias as a
+    return b + (Na - Nb) * 360;
+}
 
 ImageData generate_image_data(MessageSettings* message, uint8_t* d, size_t size,
                             bool verbose) {
@@ -315,6 +324,32 @@ ImageData generate_image_data(MessageSettings* message, uint8_t* d, size_t size,
             latT = lat;
         if (lat < latB)
             latB = lat;
+    }
+
+    if (message->customArea) {
+        // correct aliasing. Includes logic for crossing the anti-meridian
+        double lonRL = correct_alias(lonL, message->area.lonR);
+        double lonRR = correct_alias(lonR, message->area.lonR);
+        double newLonR;
+        if (lonL < lonRL && lonRL < lonR) {
+            newLonR = lonRL;
+        } else {
+            newLonR = lonRR;
+        }
+
+        double lonLL = correct_alias(lonL, message->area.lonL);
+        double lonLR = correct_alias(lonR, message->area.lonL);
+        double newLonL;
+        if (lonL < lonLR && lonRL < lonR) {
+            newLonL = lonLR;
+        } else {
+            newLonL = lonLL;
+        }
+
+        lonR = newLonR;
+        lonL = newLonL;
+        latT = message->area.latT;
+        latB = message->area.latB;
     }
 
     output.coords.lonL = lonL;
@@ -560,7 +595,121 @@ ImageData generate_image_data(MessageSettings* message, uint8_t* d, size_t size,
     return output;
 }
 
-int generate_image(const Settings* settings, OutputCoords* output) {
+int save_image(MessageSettings* message,
+               ImageData* imData,
+               uint8_t* imageBuffer) {
+    if (message->tiled) {
+        size_t leftWidth    = message->imageWidth / 2;
+        size_t rightWidth   = message->imageWidth - leftWidth;
+        size_t topHeight    = message->imageHeight / 2;
+        size_t bottomHeight = message->imageHeight - topHeight;
+
+        png_image image;
+
+        memset(&image, 0, sizeof(image));
+        image.version = PNG_IMAGE_VERSION;
+        image.format = PNG_FORMAT_RGBA;
+        image.width  = rightWidth; // rightWidth >= leftWidth
+        image.height = bottomHeight; // bottomHeight >= topHeight
+        image.flags = 0;
+        uint8_t* tileBuffer = malloc(PNG_IMAGE_SIZE(image));
+        if (tileBuffer == NULL) {
+            return 1;
+        }
+        png_image_free(&image);
+
+#define WRITE_TILE(WIDTH, HEIGHT, X_OFFSET, Y_OFFSET, PATH)                         \
+        memset(&image, 0, sizeof(image));                                           \
+        image.version = PNG_IMAGE_VERSION;                                          \
+        image.format = PNG_FORMAT_RGBA;                                             \
+        image.width  = WIDTH;                                                       \
+        image.height = HEIGHT;                                                      \
+        image.flags = 0;                                                            \
+        for (size_t y = 0; y < HEIGHT; y++) {                                       \
+            size_t inputI  = ((Y_OFFSET + y) * message->imageWidth + X_OFFSET) * 4; \
+            size_t outputI = y * WIDTH * 4;                                         \
+            memcpy(tileBuffer + outputI, imageBuffer + inputI, WIDTH * 4);          \
+        }                                                                           \
+        if (png_image_write_to_file(&image,                                         \
+                                    PATH,                                           \
+                                    0,                                              \
+                                    tileBuffer,                                     \
+                                    0,                                              \
+                                    NULL) == 0) {                                   \
+            fprintf(stderr, "Did not write image\n");                               \
+        }                                                                           \
+        png_image_free(&image);
+
+        WRITE_TILE(leftWidth,  topHeight,    0,         0,         message->topLeftImageFile);
+        WRITE_TILE(rightWidth, topHeight,    leftWidth, 0,         message->topRightImageFile);
+        WRITE_TILE(leftWidth,  bottomHeight, 0,         topHeight, message->bottomLeftImageFile);
+        WRITE_TILE(rightWidth, bottomHeight, leftWidth, topHeight, message->bottomRightImageFile);
+#undef WRITE_TILE
+        free(tileBuffer);
+
+        // find middle coords
+        double coef;
+        double cordDiff;
+
+        coef     = ((double)leftWidth) / ((double)message->imageWidth);
+        cordDiff = imData->coords.lonR - imData->coords.lonL;
+        double middleLon = imData->coords.lonL + coef * cordDiff;
+
+        const double yM = (message->imageHeight - 0.01) / (PROJECT_LAT_Y(imData->coords.latB) - PROJECT_LAT_Y(imData->coords.latT));
+        const double yB = PROJECT_LAT_Y(imData->coords.latT);
+        double dy = ((double)topHeight) / yM + yB;
+        double middleLat = (atan(exp(dy)) - MERCADER_OFFS) / MERCADER_COEF;
+
+        message->output.topLeftArea.latT = imData->coords.latT;
+        message->output.topLeftArea.latB = middleLat;
+        message->output.topLeftArea.lonL = imData->coords.lonL;
+        message->output.topLeftArea.lonR = middleLon;
+
+        message->output.topRightArea.latT = imData->coords.latT;
+        message->output.topRightArea.latB = middleLat;
+        message->output.topRightArea.lonL = middleLon;
+        message->output.topRightArea.lonR = imData->coords.lonR;
+
+        message->output.bottomLeftArea.latT = middleLat;
+        message->output.bottomLeftArea.latB = imData->coords.latB;
+        message->output.bottomLeftArea.lonL = imData->coords.lonL;
+        message->output.bottomLeftArea.lonR = middleLon;
+
+        message->output.bottomRightArea.latT = middleLat;
+        message->output.bottomRightArea.latB = imData->coords.latB;
+        message->output.bottomRightArea.lonL = middleLon;
+        message->output.bottomRightArea.lonR = imData->coords.lonR;
+
+        return 0;
+    } else {
+        png_image image;
+        memset(&image, 0, sizeof(image));
+        image.version = PNG_IMAGE_VERSION;
+        image.format = PNG_FORMAT_RGBA;
+        image.width  = message->imageWidth;
+        image.height = message->imageHeight;
+        image.flags = 0;
+
+        if (png_image_write_to_file(&image,
+                                    message->topLeftImageFile,
+                                    0,
+                                    imageBuffer,
+                                    0,
+                                    NULL) == 0) {
+            return 1;
+        }
+        png_image_free(&image);
+
+        message->output.topLeftArea.latT = imData->coords.latT;
+        message->output.topLeftArea.latB = imData->coords.latB;
+        message->output.topLeftArea.lonL = imData->coords.lonL;
+        message->output.topLeftArea.lonR = imData->coords.lonR;
+
+        return 0;
+    }
+}
+
+int generate_image(const Settings* settings) {
     int err = 0;
 
     LogSettings logS = {
@@ -588,10 +737,8 @@ int generate_image(const Settings* settings, OutputCoords* output) {
         }
         double*   imageData = imData.imageData;
         uint32_t* counts    = imData.counts;
-        output->latT = imData.coords.latT;
-        output->latB = imData.coords.latB;
-        output->lonL = imData.coords.lonL;
-        output->lonR = imData.coords.lonR;
+
+        _log(&logS, "Rendering Image");
 
         png_image image;
         memset(&image, 0, sizeof(image));
@@ -606,9 +753,7 @@ int generate_image(const Settings* settings, OutputCoords* output) {
         if (imageBuffer == NULL) {
             return 1;
         }
-
-        _log(&logS, "Rendering Image");
-
+        png_image_free(&image);
         for (size_t i = 0; i < message->imageWidth * message->imageHeight; i++) {
             if (counts[i] == 0) {
                 imageBuffer[i * 4 + 0] = 0;
@@ -625,16 +770,10 @@ int generate_image(const Settings* settings, OutputCoords* output) {
         free(imageData);
         free(counts);
 
-        if (png_image_write_to_file(&image,
-                                    message->imageFile,
-                                    0,
-                                    imageBuffer,
-                                    0,
-                                    NULL) == 0) {
-            fprintf(stderr, "Did not write image\n");
+        if (save_image(message, &imData, imageBuffer)) {
+            return 1;
         }
 
-        png_image_free(&image);
         free(imageBuffer);
     }
     logS.logName = settings->logName;
@@ -645,7 +784,7 @@ int generate_image(const Settings* settings, OutputCoords* output) {
 }
 
 int generate_mrms_typed_refl(const MRMSTypedReflSettings* settings,
-                             OutputCoords* output) {
+                             OutputImageAreas* output) {
     LogSettings logS = {
         .verbose = settings->verbose,
         .logName = settings->title,
@@ -663,7 +802,6 @@ int generate_mrms_typed_refl(const MRMSTypedReflSettings* settings,
         return 1;
     }
     MessageSettings message1 = {
-        .imageFile   = "",
         .palette     = NULL,
         .imageWidth  = settings->imageWidth,
         .imageHeight = settings->imageHeight,
@@ -671,6 +809,8 @@ int generate_mrms_typed_refl(const MRMSTypedReflSettings* settings,
         .mode        = settings->mode,
         .offset      = 0,
         .minimum     = settings->minimum,
+        .customArea  = settings->customArea,
+        .area        = settings->area,
     };
     ImageData reflData = generate_image_data(&message1, data1.gribStart,
             data1.totalSize, settings->verbose);
@@ -687,14 +827,15 @@ int generate_mrms_typed_refl(const MRMSTypedReflSettings* settings,
         .timeout = settings->timeout,
     };
     MessageSettings message2 = {
-        .imageFile   = "",
         .palette     = NULL,
         .imageWidth  = settings->imageWidth,
         .imageHeight = settings->imageHeight,
         .title       = settings->title,
-        .mode        = Nearest_Fast_Data,
+        .mode        = Nearest_Data,
         .offset      = 0,
         .minimum     = -1,
+        .customArea  = settings->customArea,
+        .area        = settings->area,
     };
     DownloadedData data2 = download_data(&downloadS2);
     if (data2.error) {
@@ -715,10 +856,7 @@ int generate_mrms_typed_refl(const MRMSTypedReflSettings* settings,
         return 1;
     }
 
-    output->latT = reflData.coords.latT;
-    output->latB = reflData.coords.latB;
-    output->lonL = reflData.coords.lonL;
-    output->lonR = reflData.coords.lonR;
+    _log(&logS, "Rendering Image");
 
     png_image image;
     memset(&image, 0, sizeof(image));
@@ -727,14 +865,12 @@ int generate_mrms_typed_refl(const MRMSTypedReflSettings* settings,
     image.width  = settings->imageWidth;
     image.height = settings->imageHeight;
     image.flags = 0;
-
     uint8_t* imageBuffer = NULL;
     imageBuffer = malloc(PNG_IMAGE_SIZE(image));
     if (imageBuffer == NULL) {
         return 1;
     }
-
-    _log(&logS, "Rendering Image");
+    png_image_free(&image);
 
     for (size_t i = 0; i < settings->imageWidth * settings->imageHeight; i++) {
         if (reflData.counts[i] == 0 || typeData.counts[i] == 0) {
@@ -811,17 +947,23 @@ int generate_mrms_typed_refl(const MRMSTypedReflSettings* settings,
     free(typeData.imageData);
     free(typeData.counts);
 
-    if (png_image_write_to_file(&image,
-                                settings->imageFile,
-                                0,
-                                imageBuffer,
-                                0,
-                                NULL) == 0) {
-        fprintf(stderr, "Did not write image\n");
-    }
+    MessageSettings saveMessage = {
+        .tiled                  = false,
+        .tiled                  = settings->tiled,
+        .topLeftImageFile       = settings->topLeftImageFile,
+        .topRightImageFile      = settings->topRightImageFile,
+        .bottomLeftImageFile    = settings->bottomLeftImageFile,
+        .bottomRightImageFile   = settings->bottomRightImageFile,
+        .imageWidth             = settings->imageWidth,
+        .imageHeight            = settings->imageHeight,
+    };
 
-    png_image_free(&image);
+    if (save_image(&saveMessage, &reflData, imageBuffer)) {
+        return 1;
+    }
     free(imageBuffer);
+
+    memcpy(output, &(saveMessage.output), sizeof(*output));
 
     return 0;
 }
