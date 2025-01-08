@@ -38,7 +38,7 @@ jobs:
       shell: bash
       run: |
         mkdir source/build
-        cd source/build `
+        cd source/build
         cmake `
           -D CMAKE_BUILD_TYPE=Release `
           ..
