@@ -40,8 +40,7 @@ jobs:
         mkdir source/build
         cd source/build
         cmake .. \
-          -D CMAKE_BUILD_TYPE=Release \
-          -D "CMAKE_BUILD_RPATH=."
+          -D CMAKE_BUILD_TYPE=Release
         make -j4
 
     - name: Make grib2pf-advanced
@@ -64,6 +63,7 @@ jobs:
            source/icon \
            source/requirements.txt \
            dist/grib2pf-advanced
+        patchelf --set-rpath "." dist/grib2pf-advanced/*.so
 
     - name: Upload grib2pf-advanced
       uses: actions/upload-artifact@v4
