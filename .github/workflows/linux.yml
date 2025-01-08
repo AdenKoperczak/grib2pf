@@ -32,7 +32,7 @@ jobs:
     - name: Setup Environment
       shell: bash
       run: |
-        sudo apt-get install libaec libpng
+        sudo apt-get install libaec-dev libpng-dev
 
     - name: Build grib2pf
       shell: bash
