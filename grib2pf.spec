@@ -4,6 +4,15 @@ EXCLUDE = {
         "MSVCP140.dll",
         "ucrtbase.dll",
 }
+EXCLUDE_STARTS = {
+    "api-ms-win-",
+    "VCRUNTIME140",
+    "libX",
+    "libQt",
+    "libxcb",
+    "libgdk",
+    "libgtk",
+}
 
 BINARIES = None
 if sys.platform.lower().startswith('win'):
@@ -41,12 +50,17 @@ toKeep = []
 
 for (dest, source, kind) in grib2pf_a.binaries:
     filename = os.path.split(dest)[1]
-    if filename.startswith("api-ms-win-")  or \
-       filename.startswith("VCRUNTIME140") or \
-       filename in EXCLUDE                    :
-        continue
 
-    toKeep.append((dest, source, kind))
+    if filename in EXCLUDE:
+        continue
+    doIt = True
+    for start in EXCLUDE_STARTS:
+        if filename.startswith(start):
+            doIt = False
+            break
+
+    if doIt:
+        toKeep.append((dest, source, kind))
 
 grib2pf_a.binaries = toKeep
 
@@ -96,14 +110,19 @@ grib2pf_ui_a = Analysis(
 
 toKeep = []
 
-for (dest, source, kind) in grib2pf_ui_a.binaries:
+for (dest, source, kind) in grib2pf_a.binaries:
     filename = os.path.split(dest)[1]
-    if filename.startswith("api-ms-win-")  or \
-       filename.startswith("VCRUNTIME140") or \
-       filename in EXCLUDE                    :
-        continue
 
-    toKeep.append((dest, source, kind))
+    if filename in EXCLUDE:
+        continue
+    doIt = True
+    for start in EXCLUDE_STARTS:
+        if filename.startswith(start):
+            doIt = False
+            break
+
+    if doIt:
+        toKeep.append((dest, source, kind))
 
 grib2pf_ui_a.binaries = toKeep
 

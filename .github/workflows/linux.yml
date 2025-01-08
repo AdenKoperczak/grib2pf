@@ -99,8 +99,9 @@ jobs:
         cp -rv presets dist/grib2pf/_internal/presets
         cp -rv icon dist/grib2pf/_internal/icon
 
-    - name: Upload grib2pf Executable
-      uses: actions/upload-artifact@v4
-      with:
-        name: grib2pf
-        path: ${{ github.workspace }}/source/dist
+# Removed until I can figure out what libs I want to include, and can redistribute
+#    - name: Upload grib2pf Executable
+#      uses: actions/upload-artifact@v4
+#      with:
+#        name: grib2pf
+#        path: ${{ github.workspace }}/source/dist
