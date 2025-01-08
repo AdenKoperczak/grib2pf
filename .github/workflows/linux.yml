@@ -46,10 +46,11 @@ jobs:
       shell: bash
       run: |
         mkdir -p dist/grib2pf-advanced
-        cp -r \
+        cp -rv \
            source/*.py \
            source/build/libgrib2pf.so \
            source/build/lib/*.so \
+           source/LICENSE \
            source/README.md \
            source/ACKNOWLEDGMENTS.md \
            source/products.txt \
@@ -59,8 +60,9 @@ jobs:
            source/palettes \
            source/presets \
            source/icon \
+           source/requirements.txt \
            dist/grib2pf-advanced
-        patchelf --add-rpath "." dist/grib2pf-advance/libgrib2pf.so
+        patchelf --add-rpath "." dist/grib2pf-advanced/libgrib2pf.so
 
     - name: Upload grib2pf-advanced
       uses: actions/upload-artifact@v4
