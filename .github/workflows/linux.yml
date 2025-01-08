@@ -15,7 +15,7 @@ jobs:
       ECBUILD_SRC: ${{ github.workspace }}/ECBUILD
       ECCODES_SRC: ${{ github.workspace }}/source/eccodes
       PYGRIB_SRC:  ${{ github.workspace }}/PYGRIB
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
 
     steps:
     - name: Checkout grib2pf
