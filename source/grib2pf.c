@@ -22,6 +22,10 @@ const double MERCADER_OFFS = M_PI / 4;
 
 #define PROJECT_LAT_Y(lat) log(tan(MERCADER_OFFS + lat * MERCADER_COEF))
 
+#ifndef CURL_WRITEFUNC_ERROR
+#define CURL_WRITEFUNC_ERROR 0
+#endif
+
 typedef struct {
     size_t size;
     size_t current;
