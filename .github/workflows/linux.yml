@@ -60,6 +60,7 @@ jobs:
            source/presets \
            source/icon \
            dist/grib2pf-advanced
+        patchelf --add-rpath "." dist/grib2pf-advance/libgrib2pf.so
 
     - name: Upload grib2pf-advanced
       uses: actions/upload-artifact@v4
