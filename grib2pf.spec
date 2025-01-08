@@ -1,17 +1,28 @@
 # -*- mode: python ; coding: utf-8 -*-
+import sys
 EXCLUDE = {
         "MSVCP140.dll",
         "ucrtbase.dll",
 }
 
-grib2pf_a = Analysis(
-    ['grib2pf.py'],
-    pathex=[],
-    binaries=[
+BINARIES = None
+if sys.platform.lower().startswith('win'):
+    BINARIES = [
         ('build\\grib2pf.dll', '.'),
         ('build\\bin\\eccodes.dll', '.'),
         ('build\\bin\\eccodes_memfs.dll', '.')
-    ],
+    ]
+else:
+    BINARIES = [
+        ('build/libgrib2pf.so', '.'),
+        ('build/bin/libeccodes.so', '.'),
+        ('build/bin/libeccodes_memfs.so', '.')
+    ]
+
+grib2pf_a = Analysis(
+    ['grib2pf.py'],
+    pathex=[],
+    binaries=BINARIES,
     datas=[
         ( "README.md", '.' ),
         ( "ACKNOWLEDGMENTS.md", "." ),
