@@ -1,0 +1,70 @@
+on:
+  push:
+    branches:
+      - "**"
+    tags:
+      - "**"
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+
+    name: Linux Build
+    env:
+      ECBUILD_SRC: ${{ github.workspace }}/ECBUILD
+      ECCODES_SRC: ${{ github.workspace }}/source/eccodes
+      PYGRIB_SRC:  ${{ github.workspace }}/PYGRIB
+    runs-on: ubuntu-22.04
+
+    steps:
+    - name: Checkout grib2pf
+      uses: actions/checkout@v4
+      with:
+        path: ${{ github.workspace }}/source
+        submodules: recursive
+
+    - name: Checkout ecbuild
+      shell: pwsh
+      run: |
+        git clone --depth 1 https://github.com/ecmwf/ecbuild.git $env:ECBUILD_SRC
+
+    - name: Setup Environment
+      shell: bash
+      run: |
+        sudo apt-get install libaec libpng
+
+    - name: Build grib2pf
+      shell: bash
+      run: |
+        mkdir source/build
+        cd source/build `
+        cmake `
+          -D CMAKE_BUILD_TYPE=Release `
+          ..
+        make -j4
+
+    - name: Make grib2pf-advanced
+      shell: bash
+      run: |
+        mkdir grib2pf-advanced
+        cp -r `
+           source/*.py `
+           source/build/libgrib2pf.so `
+           source/build/lib/*.so `
+           source/README.md `
+           source/ACKNOWLEDGMENTS.md `
+           source/products.txt `
+           source/hrrr_wrfsfcf00_products.csv `
+           source/hrrr_wrfsfcf01_products.csv `
+           source/examples `
+           source/pralettes `
+           source/presets `
+           source/icon `
+           grib2pf-advanced
+
+    - name: Upload grib2pf-advanced
+      uses: actions/upload-artifact@v4
+      with:
+        name: grib2pf-advanced
+        path: ${{ github.workspace }}/grib2pf-advanced
