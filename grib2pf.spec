@@ -15,8 +15,8 @@ if sys.platform.lower().startswith('win'):
 else:
     BINARIES = [
         ('build/libgrib2pf.so', '.'),
-        ('build/bin/libeccodes.so', '.'),
-        ('build/bin/libeccodes_memfs.so', '.')
+        ('build/lib/libeccodes.so', '.'),
+        ('build/lib/libeccodes_memfs.so', '.')
     ]
 
 grib2pf_a = Analysis(
