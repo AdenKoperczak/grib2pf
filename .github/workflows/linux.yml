@@ -25,7 +25,7 @@ jobs:
         submodules: recursive
 
     - name: Checkout ecbuild
-      shell: pwsh
+      shell: bash
       run: |
         git clone --depth 1 https://github.com/ecmwf/ecbuild.git $env:ECBUILD_SRC
 
@@ -39,8 +39,7 @@ jobs:
       run: |
         mkdir source/build
         cd source/build
-        cmake .. `
-          -D CMAKE_BUILD_TYPE=Release
+        cmake .. -D CMAKE_BUILD_TYPE=Release
         make -j4
 
     - name: Make grib2pf-advanced
