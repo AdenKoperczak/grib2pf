@@ -232,7 +232,8 @@ class MRMSTypedReflectivityPlacefile:
         self.threshold = settings.get("threshold", 0)
 
         imageFile = replace_location(settings.get("imageFile", None))
-        self.tiled = settings["imageWidth"] > 2048 or settings["imageHeight"] > 2048
+        self.tiled = ("imageWidth" in settings and settings["imageWidth"] > 2048) or \
+                     ("imageHeight" in settings and settings["imageHeight"] > 2048)
         if self.tiled:
             imageFiles = [
                 imageFile.replace("{}", "TopLeft"),
