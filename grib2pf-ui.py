@@ -637,7 +637,34 @@ class PlacefileEditor(QWidget):
                 (name in self.NOT_HRRR and hrrr)
             widget.setEnabled(not s)
 
+    def check_settings(self):
+        settings = self.get_settings()
+        warnings = []
 
+        tiled = ("imageWidth" in settings and settings["imageWidth"] > 2048) or \
+                ("imageHeight" in settings and settings["imageHeight"] > 2048)
+
+        if os.path.splitext(settings["imageFile"])[1].lower() != ".png":
+            warnings.append("Image File does not have a png extension")
+        if tiled and '{}' not in settings["imageFile"]:
+            warnings.append("Image will be tiled, but Image File does not contain {}. Recommend adding {} before the .png. It should look like \"baseRelflectivity{}.png\"")
+
+        if len(warnings) > 0:
+            text = "<ul>"
+            for warning in warnings:
+                text += f"<li>{warning}</li>"
+            text += "</ul>"
+
+            messageBox = QMessageBox()
+            messageBox.setTextFormat(Qt.RichText)
+            messageBox.setWindowTitle("Potential Settings Issue")
+            messageBox.setIcon(QMessageBox.Warning)
+            messageBox.setText(text)
+            messageBox.exec()
+
+            return True
+        else:
+            return False
 
     def set_settings(self, settings):
         for name, widget in self.dataWidgets.items():
@@ -1055,6 +1082,8 @@ class MainWindow(QWidget):
         self.placefilesModel.currentRow = row
 
     def save_file(self, fileName, conf):
+        conf = self.placefileEditor.check_settings() or conf
+
         if conf:
             self.saveDialog.setText(f"Save To {fileName}")
             if self.saveDialog.exec() != QMessageBox.Save:
