@@ -136,7 +136,7 @@ class ColorTable(Structure):
                 self.entries_[i].red2   = c_ubyte(value[5])
                 self.entries_[i].green2 = c_ubyte(value[6])
                 self.entries_[i].blue2  = c_ubyte(value[7])
-                self.entries_[i].alpha  = c_ubyte(value[8])
+                self.entries_[i].alpha2 = c_ubyte(value[8])
 
         self.entries = cast(self.entries_, POINTER(ColorEntry))
         self.count   = c_size_t(len(values))
