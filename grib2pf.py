@@ -477,7 +477,7 @@ async def run_setting(settings):
     if mainType == "basic":
         palette = replace_location(settings.get("palette"))
         if not sys.platform.startswith('win'): # Windows...cant...fork?
-            palette = ColorTable(palette, True)
+            palette = ColorTable(palette)
         placefile = GRIBPlacefile(
                 settings.get("url", None),
                 replace_location(settings.get("imageFile", None)),

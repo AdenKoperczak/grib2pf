@@ -223,7 +223,7 @@ class MessageSettings(Structure):
         if isinstance(palette, ColorTable):
             self.palette_ = palette
         else:
-            self.palette_ = ColorTable(palette, True)
+            self.palette_ = ColorTable(palette)
 
         if isinstance(imageFiles, str):
             self.tiled = c_bool(False)
@@ -354,17 +354,17 @@ class MRMSTypedReflSettings(Structure):
         if isinstance(rainPalette, ColorTable):
             self.rainPalette_ = rainPalette
         else:
-            self.rainPalette_ = ColorTable(rainPalette, True)
+            self.rainPalette_ = ColorTable(rainPalette)
 
         if isinstance(snowPalette, ColorTable):
             self.snowPalette_ = snowPalette
         else:
-            self.snowPalette_ = ColorTable(snowPalette, True)
+            self.snowPalette_ = ColorTable(snowPalette)
 
         if isinstance(hailPalette, ColorTable):
             self.hailPalette_ = hailPalette
         else:
-            self.hailPalette_ = ColorTable(hailPalette, True)
+            self.hailPalette_ = ColorTable(hailPalette)
 
         self.typeUrl     = c_char_p(typeUrl.encode("utf-8"))
         self.reflUrl     = c_char_p(reflUrl.encode("utf-8"))
