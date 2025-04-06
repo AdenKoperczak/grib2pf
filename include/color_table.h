@@ -21,6 +21,7 @@ typedef struct {
     double offset;
 } ColorTable;
 
+void color_table_print(const ColorTable* self);
 ColorTable* color_table_read(FILE* file);
 void color_table_get(const ColorTable* self, double value, uint8_t* color);
 void color_table_free(ColorTable* self);

@@ -34,6 +34,12 @@ class ColorEntry(Structure):
         ("alpha2", c_ubyte),
     ]
 
+    def __str__(self):
+        if self.has2:
+            return f"{self.value:>5} {self.red:>3} {self.green:>3} {self.blue:>3} {self.alpha:>3} {self.red2:>3} {self.green2:>3} {self.blue2:>3} {self.alpha2:>3}"
+        else:
+            return f"{self.value:>5} {self.red:>3} {self.green:>3} {self.blue:>3} {self.alpha:>3}"
+
 class ColorTable(Structure):
     _fields_ = [
         ("entries", POINTER(ColorEntry)),
@@ -124,6 +130,7 @@ class ColorTable(Structure):
                         raise e
         values = sorted(values, key = lambda a: a[0])
 
+
         self.entries_ = (ColorEntry * len(values))()
         for i, value in enumerate(values):
             self.entries_[i].value = c_double(value[0])
@@ -136,10 +143,13 @@ class ColorTable(Structure):
                 self.entries_[i].red2   = c_ubyte(value[5])
                 self.entries_[i].green2 = c_ubyte(value[6])
                 self.entries_[i].blue2  = c_ubyte(value[7])
-                self.entries_[i].alpha  = c_ubyte(value[8])
+                self.entries_[i].alpha2 = c_ubyte(value[8])
 
         self.entries = cast(self.entries_, POINTER(ColorEntry))
         self.count   = c_size_t(len(values))
+
+        if (extraLogs):
+            print(self)
 
     def _parse_color(self, text, colorType, optional):
         parts = self.COMBINE_SPACES_REGEX.sub(" ", text).split(" ")
@@ -169,6 +179,9 @@ class ColorTable(Structure):
             raise Exception(f"Could not parse color {repr(text)}: {e}")
 
         raise Exception(f"Could not parse color {repr(text)}")
+
+    def __str__(self):
+        return "\n".join(str(entrie) for entrie in self.entries[0:self.count])
 
 RenderModes = {
     "Average_Data": 0,
