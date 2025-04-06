@@ -939,7 +939,7 @@ class PlacefileList(QAbstractTableModel):
 
 class PlacefileTable(QTableView):
     selection_changed_s = Signal(int)
-    clipboard = QClipboard()
+    #clipboard = QClipboard()
 
     def selectionChanged(self, selected, deselected):
         QTableView.selectionChanged(self, selected, deselected)
@@ -964,7 +964,7 @@ class PlacefileTable(QTableView):
             mime = QMimeData()
             mime.setData(MIME_TYPE, data.encode("utf-8"))
             mime.setText(data)
-            self.clipboard.setMimeData(mime)
+            #self.clipboard.setMimeData(mime)
         elif event.matches(QKeySequence.Cut):
             index = self.selectedIndexes()[0].row()
             if index < 0:
@@ -975,10 +975,10 @@ class PlacefileTable(QTableView):
             mime = QMimeData()
             mime.setData(MIME_TYPE, data.encode("utf-8"))
             mime.setText(data)
-            self.clipboard.setMimeData(mime)
+            #self.clipboard.setMimeData(mime)
             self.model().del_placefile(index)
         elif event.matches(QKeySequence.Paste):
-            mime = self.clipboard.mimeData()
+            #mime = self.clipboard.mimeData()
             data = mime.data(MIME_TYPE)
             if len(data) == 0:
                 super().keyPressEvent(event)
