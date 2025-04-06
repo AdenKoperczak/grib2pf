@@ -774,6 +774,8 @@ int generate_image(const Settings* settings) {
             return 1;
         }
 
+        color_table_print(message->palette);
+
         free(imageBuffer);
     }
     logS.logName = settings->logName;
