@@ -385,7 +385,7 @@ class HRRRPlaceFiles:
         messages = []
         for hrrr, offset in zip(self.hrrrs, offsets):
             messages.append({
-                "imageFile":   hrrr["imageFile"],
+                "imageFiles":  hrrr["imageFile"],
                 "palette":     hrrr.get("palette", None),
                 "imageWidth":  hrrr.get("imageWidth", 1920),
                 "imageHeight": hrrr.get("imageHeight", 1080),
