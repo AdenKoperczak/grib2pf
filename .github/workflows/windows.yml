@@ -48,7 +48,7 @@ jobs:
           m2-diffutils `
           m2-perl `
           m2w64-ntldd-git
-        conda install -c conda-forge cmake libaec libpng
+        conda install -c conda-forge cmake libaec libpng libcurl
 
     - name: Setup MSVC
       uses: ilammy/msvc-dev-cmd@v1
