@@ -1151,6 +1151,8 @@ class MainWindow(QWidget):
         event.accept()
 
 def run():
+    QApplication.setHighDpiScaleFactorRoundingPolicy(
+            Qt.HighDpiScaleFactorRoundingPolicy.PassThrough)
     app = QApplication(sys.argv)
     app.setStyle("fusion")
     main = MainWindow()
