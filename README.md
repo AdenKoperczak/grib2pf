@@ -211,8 +211,8 @@ the same longitude, and every point in a row has the same latitude. `grib2pf`
 converts the latitudes and longitudes to x,y coordinates on a Mercator
 projection. In order to maximize the pixel density of the output image, these
 x,y coordinates are normalized such that 0,0 is the top left, and imageWidth -
-1,imageHeight - 1 is the bottom left of the grib data (image coordinates). This
-is simply a linear transformation of normal Mercator projections, which is
+1,imageHeight - 1 is the bottom right of the grib data (image coordinates).
+This is simply a linear transformation of normal Mercator projections, which is
 undone when the placefile is rendered because of the latitude and longitude
 coordinates saved in the placefile. The pixels are the average of all data
 points inside of them.
