@@ -125,94 +125,23 @@ settings file. Otherwise, `grib2pf` can be run without a settings file, using
 arguments instead. The arguments documentation can be seen by running `grib2pf`
 with `--help`. The arguments align with the settings described below.
 
-## Settings
-Below are all the settings supported by this program.
-
-`mainType`: The overall type of plot you want generated. Right now only `basic`
-and `MRMSTypedReflectivity` are valid. `basic` just applies the color table to
-the data. `MRMSTypedReflectivity` applies different color tables to the data
-depending on the type precipitation. This is designed to be used with
-reflectivity, although nothing is stopping you from using something else.
-
-`aws`: Boolean describing if AWS data should be used
-
-`product`: AWS product to use
-
-`typeProduct`: The AWS product to use for precipitation type for
-   `MRMSTypedReflectivity`. It should always be end in `/PrecipFlag_00.00/`.
-
-`reflProduct`: The AWS product to use for reflectivity for
-   `MRMSTypedReflectivity`. Although it is called reflectivity, other products
-   will work fine.
-
-`pullTime`: How often to pull AWS for new data
-
-`url`: The URL to pull from. Should probably come from
-"https://mrms.ncep.noaa.gov/data"
-"https://mrms.ncep.noaa.gov/data/2D/MergedBaseReflectivity/MRMS\_MergedBaseReflectivity.latest.grib2.gz"
-is a useful reflectivity plot. Descriptions of the plots can be found at
-(https://www.nssl.noaa.gov/projects/mrms/operational/tables.php)
-
-`imageFile`: The file name were the image should be written. Should be an
-absolute path to a png
-
-`placeFile`: The file name were the placefile should be written
-
-`palette`: The path to a GRS color table to use for this plot. Useful for non
-reflectivity plots. Defaults to [NOAA's Weather and Climate
-Toolkit](https://www.ncdc.noaa.gov/wct/) reflectivity palette.
-
-`rainPalette`: The path to a GRS color table to use for this plot in areas with
-   rain. (`MRMSTypedReflectivity` only)
-
-`snowPalette`: The path to a GRS color table to use for this plot in areas with
-   snow. (`MRMSTypedReflectivity` only)
-
-`hailPalette`: The path to a GRS color table to use for this plot in areas with
-   hail. (`MRMSTypedReflectivity` only)
-
-`title`: The title to display in Supercell-Wx
-
-`refresh`: How often Supercell-Wx should refresh the placefile, in seconds
-
-`imageURL`: The URL at which the image will be hosted. Unnecessary for local
-usage, but useful for web hosting
-
-`imageWidth`: The width of the image to be generated. Only effects the resolution
-off the plot
-
-`imageHeight`: The height of the image to be generated. Only effects the
-resolution off the plot
-
-`regenerateTime`: How often to regenerate the image and placefile in seconds.
-Without this, it will only generate once
-
-`verbose`: Print status messages if true
-
-`timeout`: How long to wait for a responce from the URL in seconds. Defaults to
-30s. No way to disable, because that will lock up the program
-
-`gzipped`: If the GRIB file is gzip compressed. Defaults to `true`. Is `true`
-for MRMS data.
-
-`renderMode`: How the renderer should select the data for each pixel.
-`Average_Data` averages the data under the pixel. `Nearest_Data` finds the
-nearest data point the the center of the pixel. `Nearest_Data` is good for 
-integer or flag data. Otherwise `Average_Data` is probrably better.
-
 ## Other Radar Viewers
 If another radar viewer uses a Mercator projection and has placefile support,
 this project should work, although I give no guaranties.
 
 ## Overview of how `grib2pf` Works
-The MRMS grib files provide a grid (in latitude/longitude space) of data. Each
-grid point has a value, latitude, and longitude. Every point in a column has
-the same longitude, and every point in a row has the same latitude. `grib2pf`
-converts the latitudes and longitudes to x,y coordinates on a Mercator
-projection. In order to maximize the pixel density of the output image, these
-x,y coordinates are normalized such that 0,0 is the top left, and imageWidth -
-1,imageHeight - 1 is the bottom right of the grib data (image coordinates).
-This is simply a linear transformation of normal Mercator projections, which is
-undone when the placefile is rendered because of the latitude and longitude
-coordinates saved in the placefile. The pixels are the average of all data
-points inside of them.
+The grib2 files provide a grid (in a variable coordinate space) of data. Each
+grid point has a value, latitude, and longitude. `grib2pf` converts the
+latitudes and longitudes to x,y coordinates on a Mercator projection. In order
+to maximize the pixel density of the output image, these x,y coordinates are
+normalized such that 0,0 is the top left, and imageWidth - 1,imageHeight - 1 is
+the bottom right of the grib data (image coordinates). This is simply a linear
+transformation of normal Mercator projections, which is undone when the
+placefile is rendered because of the latitude and longitude coordinates saved
+in the placefile. The pixels values are determined in several modes depending
+on `renderMode`. `Average_Data` averages the data under the pixel.
+`Nearest_Data` and `Nearest_Fast_Data` find the nearest data point to the
+center of the pixel (`Nearest_Data` should be used if the resolution of the
+image is higher than the resolution of the data. AKA if you are seeing holes in
+the data). `Max_Data` uses the largest value under the pixel. `Min_Data` uses
+the smallest value under the pixel.
