@@ -12,6 +12,7 @@ import sys
 
 from aws import AWSHandler, AWSHRRRHandler
 from grib2pflib import Grib2PfLib, Settings, ColorTable, MRMSTypedReflSettings
+from nomads import rtma2p5_ru_get_url
 
 location = os.path.split(__file__)[0]
 
@@ -217,7 +218,7 @@ class GRIBPlacefile:
 class MRMSTypedReflectivityPlacefile:
     def __init__(self, settings):
         self.proc = None
-        self.aws       = settings["aws"]
+        self.aws = settings["aws"]
         if self.aws:
             self.typeAWS = AWSHandler(settings["typeProduct"])
             self.reflAWS = AWSHandler(settings["reflProduct"])
@@ -472,6 +473,123 @@ class HRRRPlaceFiles:
             t = time.strftime(TIME_FMT).format(format(round((time.time() % 1) * 1000), "0>3"))
             print(t, f"[{logName}]", *args, **kwargs)
 
+class NomadsIndexedPlaceFiles:
+    def __init__(self, settings, getUrl, name):
+        self.settings = settings
+        self.getUrl = getUrl
+        self.proc  = None
+
+        self.timeout = 3600
+        self.logName = "NOMADS indexed " + name
+        self.products = {}
+        self.verbose = True
+
+        for i, setting in enumerate(settings):
+            self.timeout = min(setting.get("timeout", 30), self.timeout)
+            self.products[setting["product"]] = i
+
+
+    def _get_offsets(self, indexURL):
+        offsets = [-1] * len(self.settings)
+        res = requests.get(indexURL, timeout = self.timeout)
+        for line in res.text.splitlines():
+            _, offset, date, ID = line.split(":", 3)
+            if ID in self.products:
+                offsets[self.products[ID]] = int(offset)
+
+        for i in range(len(offsets)):
+            if offsets[i] == -1:
+                self._log("Could not find a product")
+                offsets[i] = 0
+
+        return offsets
+
+    def _generate(self, url, indexURL):
+        self._log(f"Generating images")
+
+        offsets = self._get_offsets(indexURL)
+        messages = []
+        for setting, offset in zip(self.settings, offsets):
+            messages.append({
+                "imageFiles":  setting["imageFile"],
+                "palette":     setting.get("palette", None),
+                "imageWidth":  setting.get("imageWidth", 1920),
+                "imageHeight": setting.get("imageHeight", 1080),
+                "title":       setting.get("title", "HRRR Data"),
+                "mode":        setting.get("mode", "Nearest_Data"),
+                "minimum":     setting.get("minimum", -998),
+                "area":        setting.get("area", None),
+                "offset":      offset,
+                })
+
+        settings = Settings(
+                url = url,
+                gzipped = False,
+                timeout = self.timeout,
+                logName = self.logName,
+                verbose = True,
+                messages = messages
+            )
+
+        lib = Grib2PfLib()
+        err, areas = lib.generate_image(settings)
+        if err:
+            self._log(f"Error generating image, {err}")
+            sys.exit(err)
+
+
+        for setting, area in zip(self.settings, areas):
+            self._log(f"Generating placefile {setting['placeFile']}", title =
+                      setting.get("title", "HRRR Data"))
+
+            latT = area["topLeftArea"]["latT"]
+            latB = area["topLeftArea"]["latB"]
+            lonL = area["topLeftArea"]["lonL"]
+            lonR = area["topLeftArea"]["lonR"]
+
+            with open(setting["placeFile"], "w") as file:
+                file.write(PLACEFILE_TEMPLATE.format(
+                        title = setting.get("title", "HRRR Data"),
+                        refresh = setting.get("refresh", 15),
+                        imageURL = setting.get("imageURL", setting["imageFile"]),
+                        latT = latT,
+                        latB = latB,
+                        lonL = lonL,
+                        lonR = lonR,
+                        threshold = setting.get("threshold", 0),
+                    ))
+        self._log("Finished generating")
+        sys.exit(0)
+
+    def generate(self):
+        if self.proc is not None and self.proc.is_alive():
+            self._log("Killing old process. Likely failed to update.")
+            self.proc.kill()
+            self.proc.join()
+            self.proc.close()
+            self.proc = None
+        elif self.proc is not None:
+            self.proc.close()
+            self.proc = None
+
+        url      = self.getUrl()
+        indexURL = url + ".idx"
+
+        self.proc = Process(target = self._generate, args = (url, indexURL),
+                            daemon = True)
+        self.proc.start()
+
+    def _log(self, *args, **kwargs):
+        if "title" in kwargs:
+            logName = kwargs.pop("title")
+        else:
+            logName = self.logName
+
+        if self.verbose:
+            t = time.strftime(TIME_FMT).format(format(round((time.time() % 1) * 1000), "0>3"))
+            print(t, f"[{logName}]", *args, **kwargs)
+
+
 async def run_setting(settings):
     mainType = settings.get("mainType", "basic")
     if mainType == "basic":
@@ -545,27 +663,42 @@ async def run_hrrrs(hrrrs):
         placefile.generate()
         await asyncio.sleep(hrrrs[0].get("pullPeriod", 10))
 
+async def run_rtma2p5_rus(settings):
+    placefile = NomadsIndexedPlaceFiles(settings, rtma2p5_ru_get_url, "RTMA2p5 RU")
+    while True:
+        placefile.generate()
+        await asyncio.sleep(settings[0].get("pullPeriod", 10))
+
 async def run_settings(settings):
     if isinstance(settings, dict):
+        # TODO color
+        print("WARNING: The settings format you are using is depricated. Recommend switching to using a list of objects.")
         await run_setting(settings)
     elif isinstance(settings, list):
         async with asyncio.TaskGroup() as tg:
             hrrrs = {}
+            rtma2p5_rus = []
             for setting in settings:
-                if setting.get("mainType", "") == "HRRR":
-                    location = setting["product"]["location"]
-                    fileType = setting["product"]["fileType"]
+                match setting.get("mainType", ""):
+                    case "HRRR":
+                        location = setting["product"]["location"]
+                        fileType = setting["product"]["fileType"]
 
-                    hrrrs.setdefault(location, {})
-                    hrrrs[location].setdefault(fileType, [])
+                        hrrrs.setdefault(location, {})
+                        hrrrs[location].setdefault(fileType, [])
 
-                    hrrrs[location][fileType].append(setting)
-                else:
-                    tg.create_task(run_setting(setting))
+                        hrrrs[location][fileType].append(setting)
+                    case "RTMA2P5_RU":
+                        rtma2p5_rus.append(setting)
+                    case _:
+                        tg.create_task(run_setting(setting))
             if len(hrrrs) > 0:
                 for location in hrrrs.values():
                     for fileType in location.values():
                         tg.create_task(run_hrrrs(fileType))
+            if len(rtma2p5_rus) > 0:
+                tg.create_task(run_rtma2p5_rus(rtma2p5_rus))
+
 
 def main():
     import argparse

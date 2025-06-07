@@ -22,6 +22,95 @@ location = os.path.split(__file__)[0]
 
 MIME_TYPE = "application/x.grib2pf-placefile"
 
+class IndexedProductDisplay(QTreeView):
+    def __init__(self, filename, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.productModel = QStandardItemModel()
+        self.proxyModel = QSortFilterProxyModel()
+
+        self.proxyModel.setSourceModel(self.productModel)
+        self.proxyModel.setFilterCaseSensitivity(Qt.CaseInsensitive)
+        self.proxyModel.setFilterKeyColumn(1)
+        self.proxyModel.setSortCaseSensitivity(Qt.CaseInsensitive)
+
+        root = self.productModel.invisibleRootItem()
+        with open(os.path.join(location, filename)) as file:
+            reader = csv.reader(file)
+            for prod, name in reader:
+                name = QStandardItem(name)
+                prod = QStandardItem(prod)
+                name.setEditable(False)
+                prod.setEditable(False)
+                root.appendRow([name, prod])
+        self.productModel.setHorizontalHeaderLabels(["Product Name", "Product ID"])
+
+        self.setModel(self.proxyModel)
+        self.setSortingEnabled(True)
+        self.sortByColumn(0, Qt.AscendingOrder)
+
+    def update_search(self, text):
+        self.proxyModel.setFilterWildcard(text)
+
+    def get_selected(self):
+        indexes = self.selectedIndexes()
+        if len(indexes) == 0:
+            return None
+
+        index = self.proxyModel.mapToSource(indexes[0])
+        return self.productModel.item(index.row(), 1).text()
+
+class RTMA2p5RUDialog(QDialog):
+    def __init__(self):
+        QDialog.__init__(self)
+
+        self.selectedProduct = ""
+
+        self.mainLayout = QVBoxLayout(self)
+        self.bottomLayout = QHBoxLayout()
+
+        self.infoBox          = QLabel()
+        self.mainView         = IndexedProductDisplay("rtmp2p5_ru_products.csv")
+        self.searchBar        = QLineEdit()
+        self.selectButton     = QPushButton("Select")
+        self.cancelButton     = QPushButton("Cancel")
+
+        self.selectButton.clicked.connect(self.select_pressed)
+        self.cancelButton.clicked.connect(self.reject)
+        self.searchBar.textChanged.connect(self.update_search)
+
+        self.infoBox.setTextFormat(Qt.RichText)
+        self.infoBox.setOpenExternalLinks(True)
+        self.infoBox.setText("""
+        <table>
+            <tr>
+                <td>RTMA2p5-RU Table</td>
+                <td><a href="https://www.nco.ncep.noaa.gov/pmb/products/rtma/rtma2p5_ru.t1645z.2dvaranl_ndfd.grb2.shtml">https://www.nco.ncep.noaa.gov/pmb/products/rtma/rtma2p5_ru.t1645z.2dvaranl_ndfd.grb2.shtml</a></td>
+            </tr>
+        </table>
+        """)
+
+        self.mainLayout.addWidget(self.infoBox)
+        self.mainLayout.addWidget(self.mainView)
+
+        self.bottomLayout.addWidget(self.searchBar)
+        self.bottomLayout.addWidget(self.selectButton)
+        self.bottomLayout.addWidget(self.cancelButton)
+
+        self.mainLayout.addLayout(self.bottomLayout)
+
+    def update_search(self, *args):
+        self.mainView.update_search(self.searchBar.text())
+
+    def select_pressed(self, *args):
+        product = self.mainView.get_selected()
+        if product is None:
+            self.reject()
+            return
+
+        self.selectedProduct = product
+        self.accept()
+
 
 class HRRRProductsDialog(QDialog):
     def __init__(self):
@@ -238,6 +327,7 @@ class ProductsSelect(QWidget):
         self.display      = QLineEdit()
         self.mrmsDialog   = MRMSProductsDialog()
         self.hrrrDialog   = HRRRProductsDialog()
+        self.rtmaruDialog = RTMA2p5RUDialog()
         self.dialogButton = QToolButton()
 
         self.dialogButton.setText("...")
@@ -255,13 +345,16 @@ class ProductsSelect(QWidget):
         self.dataType = dataType
 
     def dialog(self):
-        if self.dataType == "mrms":
-            return self.mrmsDialog
-        elif self.dataType == "hrrr":
-            return self.hrrrDialog
-        else:
-            print("ProductSelect dialog called without setting data type")
-            return
+        match self.dataType:
+            case "mrms":
+                return self.mrmsDialog
+            case "hrrr":
+                return self.hrrrDialog
+            case "rtmaru":
+                return self.rtmaruDialog
+            case _:
+                print("ProductSelect dialog called without setting data type")
+                return
 
     def set_product(self, text):
         self.dialog().selectedProduct = text
@@ -487,6 +580,7 @@ class PlacefileEditor(QWidget):
         ["Basic", "basic"],
         ["MRMS Typed Reflectivity", "MRMSTypedReflectivity"],
         ["HRRR", "HRRR"],
+        ["RTMA Rapid Update", "RTMA2P5_RU"]
     ]
 
     def __init__(self, *args, **kwargs):
@@ -622,11 +716,26 @@ class PlacefileEditor(QWidget):
     NOT_TYPED_PREC_ONLY = {"product", "palette", "url"}
     NOT_HRRR            = {"gzipped"}
     def change_enabled_callback(self, *args):
-        hrrr      = self.dataWidgets["mainType"].currentData() == "HRRR"
-        typedPrec = self.dataWidgets["mainType"].currentData() == "MRMSTypedReflectivity"
-        aws       = self.dataWidgets["aws"].isChecked() or hrrr or typedPrec
+        hrrr = False
+        typedPrec = False
+        rtmaru = False
+        dataType = "mrms"
+        aws = self.dataWidgets["aws"].isChecked()
 
-        self.dataWidgets["product"].set_data_type("hrrr" if hrrr else "mrms")
+        match self.dataWidgets["mainType"].currentData():
+            case "HRRR":
+                hrrr = True
+                dataType = "hrrr"
+                aws = True
+            case "MRMSTypedReflectivity":
+                typedPrec = True
+                aws = True
+            case "RTMA2P5_RU":
+                rtmaru = True
+                dataType = "rtmaru"
+
+
+        self.dataWidgets["product"].set_data_type(dataType)
 
         for name, widget in self.dataWidgets.items():
             s = (name in self.enableWidgets and not self.enableWidgets[name].isChecked()) or \
