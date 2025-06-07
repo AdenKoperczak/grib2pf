@@ -565,6 +565,7 @@ class PlacefileEditor(QWidget):
         "gzipped":              True,
         "renderMode":           "Average_Data",
         "minimum":              -998,
+        "contour":              False,
         "threshold":            0,
         "area":                 {"top": 0, "bottom": 0, "left": 0, "right": 0}
     }
@@ -615,6 +616,7 @@ class PlacefileEditor(QWidget):
             "gzipped":          QCheckBox(),
             "renderMode":       QComboBox(),
             "minimum":          QDoubleSpinBox(),
+            "contour":          QCheckBox(),
             "threshold":        QDoubleSpinBox(),
             "area":             AreaInput(),
         }
@@ -668,6 +670,7 @@ class PlacefileEditor(QWidget):
             ("Image File", "imageFile", False, "The path to where the image (png) should be generated"),
             ("Place File", "placeFile", False, "The path to where the placefile should be generated"),
             ("Minimum", "minimum", True, "The minimum value which is considered valid."),
+            ("Contour", "contour", False, "Should the generated image be contoured before rendering."),
             ("Threshold", "threshold", True, "The threshold value for the placefile"),
             ("Refresh (s)", "refresh", False, "How often Supercell-Wx should refresh the placefile. Often is OK for local files."),
             ("Regeneration Period", "regenerateTime", False, "How often the placefile should be regenerated."),
