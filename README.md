@@ -117,6 +117,28 @@ radar layer. The local radar will have a higher resolution, and have more
 plots. You could also only enable the grib placefile layer(s) on specific
 panes.
 
+## Contours
+Contours are an optional feature which can be used to help see how data is
+changing over distance. It is similar in concept to isotherms. Each color table
+entry is given a contour. Only the pixels that are determined to be contour are
+rendered. They have their initial value, so the color table can define the color
+of given contours. Below is an example color table that can be used with Kelvin
+based temperature data. It covers -30 to 40 degrees Celsius, with a contour
+every 10 degrees.
+
+```placefile
+offset: -273
+
+Color: -30   0   0   0
+Color: -20   0   0 255
+Color: -10   0 255 255
+Color:   0   0 255   0
+Color:  10 255 255   0
+Color:  20 255   0   0
+Color:  30 255   0 255
+Color:  40 255 255 255
+```
+
 ## Arguments
 When run without an argument, `grib2pf` will run using the settings file in the
 install directory (`grib2pf` on Linux, and `grib2pf\_internal` on Windows).
