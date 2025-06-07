@@ -63,5 +63,20 @@
         "pullPeriod": 10,
         "gzipped": true,
         "renderMode": "Average_Data"
+    },
+    {
+        "mainType": "RTMA2P5_RU",
+        "product": "TMP:2 m above ground:anl:",
+        "imageFile": "{_internal}/temperature.png",
+        "placeFile": "{_internal}/temperature.txt",
+        "palette": "{_internal}/palettes/temperature.pal",
+        "verbose": true,
+        "refresh": 10,
+        "regenerateTime": 60,
+        "title": "Surface Temperatures",
+        "pullPeriod": 10,
+        "renderMode": "Nearest_Data",
+        "minimum": 0,
+        "contour": true
     }
 ]

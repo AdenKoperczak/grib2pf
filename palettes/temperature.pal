@@ -1,0 +1,10 @@
+offset: -273
+
+Color: -30   0   0   0
+Color: -20   0   0 255
+Color: -10   0 255 255
+Color:   0   0 255   0
+Color:  10 255 255   0
+Color:  20 255   0   0
+Color:  30 255   0 255
+Color:  40 255 255 255
