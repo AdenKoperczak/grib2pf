@@ -6,6 +6,12 @@
 #include <stdbool.h>
 #include <stddef.h>
 
+#if defined(_MSC_VER)
+#include <BaseTsd.h>
+typedef SSIZE_T ssize_t;
+#endif
+
+
 typedef struct {
     double value;
     uint8_t red, green, blue, alpha;
