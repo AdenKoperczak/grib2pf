@@ -96,6 +96,7 @@ class GRIBPlacefile:
             verbose = False,
             timeout = 30,
             minimum = -998,
+            contour = False,
             mode = "Nearest_Data",
             threshold = 0,
             area = None):
@@ -115,6 +116,7 @@ class GRIBPlacefile:
         self.verbose = verbose
         self.timeout = timeout
         self.minimum = minimum
+        self.contour = contour
         self.mode = mode
         self.threshold = threshold
         self.area = area
@@ -149,6 +151,7 @@ class GRIBPlacefile:
                                 "mode": self.mode,
                                 "offset": 0,
                                 "minimum": self.minimum,
+                                "contour": self.contour,
                                 "area": self.area
                             }])
         lib = Grib2PfLib()
@@ -393,6 +396,7 @@ class HRRRPlaceFiles:
                 "title":       hrrr.get("title", "HRRR Data"),
                 "mode":        hrrr.get("mode", "Nearest_Data"),
                 "minimum":     hrrr.get("minimum", -998),
+                "contour":     hrrr.get("contour", False),
                 "area":        hrrr.get("area", None),
                 "offset":      offset,
                 })
@@ -518,6 +522,7 @@ class NomadsIndexedPlaceFiles:
                 "title":       setting.get("title", "HRRR Data"),
                 "mode":        setting.get("mode", "Nearest_Data"),
                 "minimum":     setting.get("minimum", -998),
+                "contour":     setting.get("contour", False),
                 "area":        setting.get("area", None),
                 "offset":      offset,
                 })
@@ -610,6 +615,7 @@ async def run_setting(settings):
                 settings.get("verbose", False),
                 settings.get("timeout", 30),
                 settings.get("minimum", -998),
+                settings.get("contour", False),
                 settings.get("renderMode", "Average_Data"),
                 settings.get("threshold", 0),
                 settings.get("area", None))

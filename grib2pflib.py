@@ -205,6 +205,7 @@ class MessageSettings(Structure):
         ("title", c_char_p),
         ("mode", c_int),
         ("minimum", c_double),
+        ("contour", c_bool),
 
         ("customArea", c_bool),
         ("area", ImageArea),
@@ -215,7 +216,7 @@ class MessageSettings(Structure):
     ]
 
     def set(self, imageFiles, palette, imageWidth, imageHeight, title,
-                 mode, offset, minimum, area = None):
+                 mode, offset, minimum, contour, area = None):
 
         if isinstance(mode, str):
             mode = RenderModes[mode]
@@ -247,6 +248,7 @@ class MessageSettings(Structure):
         self.mode        = c_int(mode)
         self.offset      = c_size_t(offset)
         self.minimum     = c_double(minimum)
+        self.contour     = c_bool(contour)
         if area is None:
             self.customArea = c_bool(False)
             self.area       = ImageArea()

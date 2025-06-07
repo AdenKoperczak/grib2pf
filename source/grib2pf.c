@@ -595,6 +595,50 @@ ImageData generate_image_data(MessageSettings* message, uint8_t* d, size_t size,
     return output;
 }
 
+void contour_image_data(MessageSettings* message, ImageData* input) {
+
+    // This is somewhat inefficent right now. It would be faster to go over the
+    // data twice, once to label, and again to contour
+    for (size_t x = 0; x < message->imageWidth - 1; x++) {
+        for (size_t y = 0; y < message->imageHeight - 1; y++) {
+            size_t is[4];
+            double values[4];
+            ssize_t indexes[4];
+#define GET_INDEX(index, xoff, yoff) { \
+                is[index] = (x + xoff) + (y + yoff) * message->imageWidth; \
+                if (input->counts[is[index]] == 0) { \
+                    values[index] = 0; \
+                    indexes[index] = -1; \
+                } else { \
+                    values[index] = input->imageData[is[index]] / input->counts[is[index]]; \
+                    indexes[index] = color_table_get_index(message->palette, values[index]); \
+                } \
+            }
+            GET_INDEX(0, 0, 0)
+            GET_INDEX(1, 1, 0)
+            GET_INDEX(2, 0, 1)
+            GET_INDEX(3, 1, 1)
+#undef GET_INDEX
+
+            if (indexes[0] == indexes[1] &&
+                indexes[0] == indexes[2] &&
+                indexes[0] == indexes[3]) {
+                input->counts[is[0]] = 0;
+            }
+        }
+    }
+
+    for (size_t x = 0; x < message->imageWidth; x++) {
+        size_t i = x + (message->imageHeight - 1) * message->imageWidth;
+        input->counts[i] = 0;
+    }
+    for (size_t y = 0; y < message->imageHeight; y++) {
+        size_t i = (message->imageWidth - 1) + (y) * message->imageWidth;
+        input->counts[i] = 0;
+    }
+}
+
+
 int save_image(MessageSettings* message,
                ImageData* imData,
                uint8_t* imageBuffer) {
@@ -735,6 +779,13 @@ int generate_image(const Settings* settings) {
         if (imData.error) {
             continue;
         }
+
+        // Contour data if needed
+        if (message->contour) {
+            _log(&logS, "Contouring Image");
+            contour_image_data(message, &imData);
+        }
+
         double*   imageData = imData.imageData;
         uint32_t* counts    = imData.counts;
 
@@ -948,7 +999,6 @@ int generate_mrms_typed_refl(const MRMSTypedReflSettings* settings,
     free(typeData.counts);
 
     MessageSettings saveMessage = {
-        .tiled                  = false,
         .tiled                  = settings->tiled,
         .topLeftImageFile       = settings->topLeftImageFile,
         .topRightImageFile      = settings->topRightImageFile,

@@ -75,6 +75,27 @@ void color_table_get(const ColorTable* self, double value, uint8_t* color) {
     color[3] = 0;
 }
 
+ssize_t color_table_get_index(const ColorTable* self, double value)
+{
+    value = value * self->scale + self->offset;
+
+    if (self->count == 0 ||
+        value < self->entries[0].value) {
+        return -1;
+    } else if (value >= self->entries[self->count - 1].value) {
+        return self->count - 1;
+    }
+
+    for (size_t index = 1; index < self->count; index++) {
+        if (self->entries[index].value > value) {
+            return index - 1;
+        }
+    }
+
+    fprintf(stderr, "Did not find color, should be unreachable.");
+    return -1;
+}
+
 void color_table_free(ColorTable* self) {
     free(self->entries);
     free(self);

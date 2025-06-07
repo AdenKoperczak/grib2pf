@@ -36,6 +36,7 @@ typedef struct {
     const char* title;
     /*RenderMode*/int mode;
     double minimum;
+    bool contour;
 
     bool customArea;
     ImageArea area;

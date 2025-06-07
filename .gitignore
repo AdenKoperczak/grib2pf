@@ -3,3 +3,5 @@ __pycache__
 settings*
 build
 perf.data*
+.cache
+test.*
