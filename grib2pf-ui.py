@@ -736,6 +736,7 @@ class PlacefileEditor(QWidget):
             case "RTMA2P5_RU":
                 rtmaru = True
                 dataType = "rtmaru"
+                aws = True
 
 
         self.dataWidgets["product"].set_data_type(dataType)

@@ -568,6 +568,12 @@ class NomadsIndexedPlaceFiles:
         sys.exit(0)
 
     def generate(self):
+        url = self.getUrl()
+        if url is None or self.lastUrl == url:
+            return
+        self.lastUrl = url
+        indexURL = url + ".idx"
+
         if self.proc is not None and self.proc.is_alive():
             self._log("Killing old process. Likely failed to update.")
             self.proc.kill()
@@ -577,12 +583,6 @@ class NomadsIndexedPlaceFiles:
         elif self.proc is not None:
             self.proc.close()
             self.proc = None
-
-        url = self.getUrl()
-        if url is None or self.lastUrl == url:
-            return
-        self.lastUrl = url
-        indexURL = url + ".idx"
 
         self.proc = Process(target = self._generate, args = (url, indexURL),
                             daemon = True)
