@@ -480,8 +480,9 @@ class HRRRPlaceFiles:
 class NomadsIndexedPlaceFiles:
     def __init__(self, settings, getUrl, name):
         self.settings = settings
-        self.getUrl = getUrl
-        self.proc  = None
+        self.getUrl   = getUrl
+        self.proc     = None
+        self.lastUrl  = None
 
         self.timeout = 3600
         self.logName = "NOMADS indexed " + name
@@ -577,7 +578,10 @@ class NomadsIndexedPlaceFiles:
             self.proc.close()
             self.proc = None
 
-        url      = self.getUrl()
+        url = self.getUrl()
+        if url is None or self.lastUrl == url:
+            return
+        self.lastUrl = url
         indexURL = url + ".idx"
 
         self.proc = Process(target = self._generate, args = (url, indexURL),
