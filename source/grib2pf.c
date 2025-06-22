@@ -22,6 +22,8 @@ const double MERCADER_OFFS = M_PI / 4;
 
 #define PROJECT_LAT_Y(lat) log(tan(MERCADER_OFFS + lat * MERCADER_COEF))
 
+#define ARRAY_INIT 10
+
 typedef struct {
     size_t size;
     size_t current;
@@ -277,7 +279,7 @@ double correct_alias(double a, double b) {
 }
 
 ImageData generate_image_data(MessageSettings* message, uint8_t* d, size_t size,
-                            bool verbose) {
+                            bool verbose, size_t* offsets, size_t offsetsSize) {
     ImageData output;
     output.error = 0;
 
@@ -285,8 +287,17 @@ ImageData generate_image_data(MessageSettings* message, uint8_t* d, size_t size,
         .verbose = verbose,
         .logName = message->title,
     };
-    codes_handle* h = codes_handle_new_from_message(NULL, d + message->offset,
-            size - message->offset);
+    size_t offset = message->offset;
+    if (offsetsSize > 0 && offsets != NULL) {
+        if (offsetsSize <= offset) {
+            output.error = 1;
+            return output;
+        }
+        offset = offsets[offset];
+    }
+
+    codes_handle* h = codes_handle_new_from_message(NULL, d + offset,
+            size - offset);
     if (h == NULL) {
         fprintf(stderr, "Could not read in product\n");
         output.error = 1;
@@ -773,11 +784,45 @@ int generate_image(const Settings* settings) {
     };
     DownloadedData data = download_data(&downloadS);
 
+    size_t* offsets = NULL;
+    size_t offsetsSize = 0;
+    if (settings->calcOffsets) {
+        size_t offset = 0;
+        size_t offsetsAlloced = ARRAY_INIT;
+        offsets = calloc(ARRAY_INIT, sizeof(*offsets));
+        if (offsets == NULL) {
+            return 1;
+        }
+        while (offset < data.totalSize) {
+            if (offsetsAlloced <= offsetsSize) {
+                offsetsAlloced *= 2;
+                size_t* new = realloc(offsets, offsetsAlloced * sizeof(*offsets));
+                if (new == NULL) {
+                    return 1;
+                }
+                offsets = new;
+            }
+
+            offsets[offsetsSize] = offset;
+            codes_handle* h = codes_handle_new_from_message(NULL,
+                    data.gribStart + offset, data.totalSize - offset);
+            if (!h) {
+                break;
+            }
+            size_t msgLen = 0;
+            GRIB_CHECK(codes_get_long(h, "totalLength", &msgLen), 0);
+            offset += msgLen;
+            offsetsSize += 1;
+            codes_handle_delete(h);
+        }
+        printf("%zu\n", offsetsSize);
+    }
+
     for (size_t messageIndex = 0; messageIndex < settings->messageCount;
             messageIndex++) {
         MessageSettings* message = settings->messages + messageIndex;
         ImageData imData = generate_image_data(message, data.gribStart,
-                data.totalSize, settings->verbose);
+                data.totalSize, settings->verbose, offsets, offsetsSize);
 
         logS.logName = message->title;
         if (imData.error) {
@@ -868,7 +913,7 @@ int generate_mrms_typed_refl(const MRMSTypedReflSettings* settings,
         .area        = settings->area,
     };
     ImageData reflData = generate_image_data(&message1, data1.gribStart,
-            data1.totalSize, settings->verbose);
+            data1.totalSize, settings->verbose, NULL, 0);
     free(data1.data);
     if (reflData.error) {
         return 1;
@@ -897,7 +942,7 @@ int generate_mrms_typed_refl(const MRMSTypedReflSettings* settings,
         return 1;
     }
     ImageData typeData = generate_image_data(&message2, data2.gribStart,
-            data2.totalSize, settings->verbose);
+            data2.totalSize, settings->verbose, NULL, 0);
     free(data2.data);
     if (typeData.error) {
         return 1;

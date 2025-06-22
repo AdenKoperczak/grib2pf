@@ -156,7 +156,7 @@ class ColorTable(Structure):
 
         try:
             if colorType == "color4":
-                if len(parts) == 5 or (optional and len(parts) == 8):
+                if len(parts) == 5 or (optional and len(parts) == 9):
                     parts = [float(parts[0])] + [int(part) for part in parts[1:]]
                     return tuple(parts)
             elif colorType == "color":
@@ -270,12 +270,13 @@ class Settings(Structure):
         ("timeout", c_ulonglong),
         ("logName", c_char_p),
         ("verbose", c_bool),
+        ("calcOffsets", c_bool),
 
         ("messageCount", c_size_t),
         ("messages", POINTER(MessageSettings)),
     ]
 
-    def __init__(self, url, gzipped, verbose, logName, timeout, messages):
+    def __init__(self, url, gzipped, verbose, logName, timeout, calcOffsets, messages):
         Structure.__init__(self)
 
         self.messages_ = (MessageSettings * len(messages))()
@@ -286,6 +287,7 @@ class Settings(Structure):
         self.gzipped      = c_bool(gzipped)
         self.verbose      = c_bool(verbose)
         self.timeout      = c_ulonglong(timeout)
+        self.calcOffsets  = c_bool(calcOffsets)
         self.logName      = c_char_p(logName.encode("utf-8"))
         self.messageCount = c_size_t(len(messages))
         self.messages     = cast(self.messages_, POINTER(MessageSettings))

@@ -52,6 +52,7 @@ typedef struct {
     uint64_t timeout;
     const char* logName;
     bool verbose;
+    bool calcOffsets; // Offsets are given as an index, not an offset. It will need to be calculated and replaced
 
     size_t messageCount;
     MessageSettings* messages;
