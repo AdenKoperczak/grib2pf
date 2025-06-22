@@ -383,6 +383,10 @@ ImageData generate_image_data(MessageSettings* message, uint8_t* d, size_t size,
             double lon   = latLonValues[i + 1];
             double value = latLonValues[i + 2];
 
+            if (value < message->minimum) {
+                continue;
+            }
+
             double x = (lon - lonL) * xM;
             double y;
             if (lat == lastLat) {
