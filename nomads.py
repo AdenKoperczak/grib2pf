@@ -33,7 +33,7 @@ def aqm_conus_get_url(time = None):
     if time is None:
         time = datetime.now(UTC) - timedelta(hours=1)
 
-    # TODO convert to UTC
+    time = time.astimezone(UTC)
 
     if time.hour in range(6, 12):
         time = time.replace(hour = 6)
@@ -44,16 +44,23 @@ def aqm_conus_get_url(time = None):
                         second = 0,
                         minute = 0)
 
-    url = AQM_CONUS_BASE_URL.format(date = time.strftime("%Y%m%d"),
-                                    time = time.strftime("%H"))
+    url = None
 
-    try:
-        listed = requests.get(AQM_CONUS_LIST_URL.format(
-            date = time.strftime("%Y%m%d"), time = time.strftime("%H")))
-    except:
-        return None
+    # only go back so far
+    for i in range(4):
+        try:
+            listed = requests.get(AQM_CONUS_LIST_URL.format(
+                date = time.strftime("%Y%m%d"), time = time.strftime("%H")))
+            url = AQM_CONUS_BASE_URL.format(date = time.strftime("%Y%m%d"),
+                                            time = time.strftime("%H"))
+            if listed.ok and url.split("/")[-1] in listed.content.decode("utf-8"):
+                return url, time, timedelta(hours=1)
+        except:
+            pass
+        if time.hour == 6:
+            time -= timedelta(hours = 18)
+        else:
+            time -= timedelta(hours = 6)
 
-    if listed.ok and url.split("/")[-1] in listed.content.decode("utf-8"):
-        return url, time, timedelta(hours=1)
-    return None, time, timedelta(hours=1)
+    return None, time, timedelta(hours = 1)
 
