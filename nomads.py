@@ -46,8 +46,13 @@ def aqm_conus_get_url(time = None):
 
     url = AQM_CONUS_BASE_URL.format(date = time.strftime("%Y%m%d"),
                                     time = time.strftime("%H"))
-    listed = requests.get(AQM_CONUS_LIST_URL.format(
-        date = time.strftime("%Y%m%d"), time = time.strftime("%H")))
+
+    try:
+        listed = requests.get(AQM_CONUS_LIST_URL.format(
+            date = time.strftime("%Y%m%d"), time = time.strftime("%H")))
+    except:
+        return None
+
     if listed.ok and url.split("/")[-1] in listed.content.decode("utf-8"):
         return url, time, timedelta(hours=1)
     return None, time, timedelta(hours=1)
