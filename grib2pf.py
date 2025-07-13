@@ -12,7 +12,7 @@ import sys
 
 from aws import AWSHandler, AWSHRRRHandler
 from grib2pflib import Grib2PfLib, Settings, ColorTable, MRMSTypedReflSettings
-from nomads import rtma2p5_ru_get_url
+from nomads import rtma2p5_ru_get_url, aqm_conus_get_url
 
 location = os.path.split(__file__)[0]
 
@@ -27,11 +27,13 @@ TIME_FMT = "[%Y-%m-%d %H:%M:%S.{}]"
 def normalize(data):
     return (data  - data.min()) / (data.max() - data.min())
 
-PLACEFILE_TEMPLATE = """
+PLACEFILE_HEADER_TEMPLATE = """
 Title: {title}
 RefreshSeconds: {refresh}
 Threshold: {threshold}
+"""
 
+PLACEFILE_BODY_TEMPLATE = """
 Image: "{imageURL}"
     {latT}, {lonL}, 0, 0
     {latT}, {lonR}, 1, 0
@@ -41,11 +43,10 @@ Image: "{imageURL}"
     {latB}, {lonL}, 0, 1
 End:
 """
-TILED_PLACEFILE_TEMPLATE = """
-Title: {title}
-RefreshSeconds: {refresh}
-Threshold: {threshold}
 
+PLACEFILE_TEMPLATE = PLACEFILE_HEADER_TEMPLATE + PLACEFILE_BODY_TEMPLATE
+
+TILED_PLACEFILE_TEMPLATE = PLACEFILE_HEADER_TEMPLATE + """
 Image: "{imageURLs[0]}"
     {areas[topLeftArea][latT]}, {areas[topLeftArea][lonL]}, 0, 0
     {areas[topLeftArea][latT]}, {areas[topLeftArea][lonR]}, 1, 0
@@ -142,6 +143,7 @@ class GRIBPlacefile:
                             self.verbose,
                             self.title,
                             self.timeout,
+                            False,
                             [{
                                 "imageFiles": imageFiles,
                                 "palette": self.palette,
@@ -407,6 +409,7 @@ class HRRRPlaceFiles:
                 timeout = self.timeout,
                 logName = self.logName,
                 verbose = True,
+                calcOffsets = False,
                 messages = messages
             )
 
@@ -477,6 +480,115 @@ class HRRRPlaceFiles:
             t = time.strftime(TIME_FMT).format(format(round((time.time() % 1) * 1000), "0>3"))
             print(t, f"[{logName}]", *args, **kwargs)
 
+class NomadsTimedPlaceFiles:
+    def __init__(self, settings, getUrl, name, count):
+        self.settings = settings
+        self.getUrl   = getUrl
+        self.proc     = None
+        self.lastUrl  = None
+
+        self.timeout = 3600
+        self.logName = "NOMADS Timed " + name
+        self.products = {}
+        self.verbose = True
+        self.timeout = settings.get("timeout", 30)
+        self.count = count
+
+    def _generate(self, url, firstTime, deltaTime):
+        self._log(f"Generating images")
+
+        messages = []
+        for index in range(self.count):
+            messages.append({
+                "imageFiles":  self.settings["imageFile"].replace("{}", str(index)),
+                "palette":     self.settings.get("palette", None),
+                "imageWidth":  self.settings.get("imageWidth", 1920),
+                "imageHeight": self.settings.get("imageHeight", 1080),
+                "title":       self.settings.get("title", "HRRR Data"),
+                "mode":        self.settings.get("mode", "Nearest_Data"),
+                "minimum":     self.settings.get("minimum", -998),
+                "contour":     self.settings.get("contour", False),
+                "area":        self.settings.get("area", None),
+                "offset":      index,
+                })
+
+        settings = Settings(
+                url = url,
+                gzipped = False,
+                timeout = self.timeout,
+                logName = self.logName,
+                verbose = True,
+                calcOffsets = True,
+                messages = messages
+            )
+
+        lib = Grib2PfLib()
+        err, areas = lib.generate_image(settings)
+        if err:
+            self._log(f"Error generating image, {err}")
+            sys.exit(err)
+
+
+        self._log(f"Generating placefile {self.settings['placeFile']}", title =
+                      self.settings.get("title", "HRRR Data"))
+
+        with open(self.settings["placeFile"], "w") as file:
+            file.write(PLACEFILE_HEADER_TEMPLATE.format(
+                    title = self.settings.get("title", "Data"),
+                    refresh = self.settings.get("refresh", 15),
+                    threshold = self.settings.get("threshold", 0),
+                ))
+            currentTime = firstTime
+            for i, area in enumerate(areas):
+                nextTime = currentTime + deltaTime
+                latT = area["topLeftArea"]["latT"]
+                latB = area["topLeftArea"]["latB"]
+                lonL = area["topLeftArea"]["lonL"]
+                lonR = area["topLeftArea"]["lonR"]
+                file.write(f"TimeRange: {currentTime.isoformat()} {nextTime.isoformat()}\n");
+                file.write(PLACEFILE_BODY_TEMPLATE.format(
+                    imageURL = self.settings.get("imageURL", self.settings["imageFile"]).replace("{}", str(i)),
+                    latT = latT,
+                    latB = latB,
+                    lonL = lonL,
+                    lonR = lonR,
+                ))
+                file.write("End:\n")
+                currentTime = nextTime
+
+        self._log("Finished generating")
+        sys.exit(0)
+
+    def generate(self):
+        url, firstTime, deltaTime = self.getUrl()
+        if url is None or self.lastUrl == url:
+            return
+        self.lastUrl = url
+
+        if self.proc is not None and self.proc.is_alive():
+            self._log("Killing old process. Likely failed to update.")
+            self.proc.kill()
+            self.proc.join()
+            self.proc.close()
+            self.proc = None
+        elif self.proc is not None:
+            self.proc.close()
+            self.proc = None
+
+        self.proc = Process(target = self._generate, args = (url, firstTime, deltaTime),
+                            daemon = True)
+        self.proc.start()
+
+    def _log(self, *args, **kwargs):
+        if "title" in kwargs:
+            logName = kwargs.pop("title")
+        else:
+            logName = self.logName
+
+        if self.verbose:
+            t = time.strftime(TIME_FMT).format(format(round((time.time() % 1) * 1000), "0>3"))
+            print(t, f"[{logName}]", *args, **kwargs)
+
 class NomadsIndexedPlaceFiles:
     def __init__(self, settings, getUrl, name):
         self.settings = settings
@@ -534,6 +646,7 @@ class NomadsIndexedPlaceFiles:
                 timeout = self.timeout,
                 logName = self.logName,
                 verbose = True,
+                calcOffsets = False,
                 messages = messages
             )
 
@@ -679,6 +792,12 @@ async def run_rtma2p5_rus(settings):
         placefile.generate()
         await asyncio.sleep(settings[0].get("pullPeriod", 10))
 
+async def run_aqm_conus(settings):
+    placefile = NomadsTimedPlaceFiles(settings, aqm_conus_get_url, "AQM", 24)
+    while True:
+        placefile.generate()
+        await asyncio.sleep(settings.get("pullPeriod", 10))
+
 async def run_settings(settings):
     if isinstance(settings, dict):
         # TODO color
@@ -700,6 +819,8 @@ async def run_settings(settings):
                         hrrrs[location][fileType].append(setting)
                     case "RTMA2P5_RU":
                         rtma2p5_rus.append(setting)
+                    case "AQM_CONUS":
+                        tg.create_task(run_aqm_conus(setting))
                     case _:
                         tg.create_task(run_setting(setting))
             if len(hrrrs) > 0:
