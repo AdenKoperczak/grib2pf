@@ -18,8 +18,11 @@ def rtma2p5_ru_get_url(time = None):
     url = RTMA2P5_RU_BASE_URL.format(date = time.strftime("%Y%m%d"),
                                      time = time.strftime("%H%M"))
 
-    listed = requests.get(RTMA2P5_RU_LIST_URL.format(
-        date = time.strftime("%Y%m%d")))
+    try:
+        listed = requests.get(RTMA2P5_RU_LIST_URL.format(
+            date = time.strftime("%Y%m%d")))
+    except:
+        return None
 
     if listed.ok and url.split("/")[-1] in listed.content.decode("utf-8"):
         return url
