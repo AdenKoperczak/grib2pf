@@ -34,7 +34,7 @@ Threshold: {threshold}
 """
 
 PLACEFILE_BODY_TEMPLATE = """
-Image: "{imageURL}"
+Image: {imageURL}
     {latT}, {lonL}, 0, 0
     {latT}, {lonR}, 1, 0
     {latB}, {lonR}, 1, 1
@@ -47,7 +47,7 @@ End:
 PLACEFILE_TEMPLATE = PLACEFILE_HEADER_TEMPLATE + PLACEFILE_BODY_TEMPLATE
 
 TILED_PLACEFILE_TEMPLATE = PLACEFILE_HEADER_TEMPLATE + """
-Image: "{imageURLs[0]}"
+Image: {imageURLs[0]}
     {areas[topLeftArea][latT]}, {areas[topLeftArea][lonL]}, 0, 0
     {areas[topLeftArea][latT]}, {areas[topLeftArea][lonR]}, 1, 0
     {areas[topLeftArea][latB]}, {areas[topLeftArea][lonR]}, 1, 1
@@ -55,7 +55,7 @@ Image: "{imageURLs[0]}"
     {areas[topLeftArea][latB]}, {areas[topLeftArea][lonR]}, 1, 1
     {areas[topLeftArea][latB]}, {areas[topLeftArea][lonL]}, 0, 1
 End:
-Image: "{imageURLs[1]}"
+Image: {imageURLs[1]}
     {areas[topRightArea][latT]}, {areas[topRightArea][lonL]}, 0, 0
     {areas[topRightArea][latT]}, {areas[topRightArea][lonR]}, 1, 0
     {areas[topRightArea][latB]}, {areas[topRightArea][lonR]}, 1, 1
@@ -63,7 +63,7 @@ Image: "{imageURLs[1]}"
     {areas[topRightArea][latB]}, {areas[topRightArea][lonR]}, 1, 1
     {areas[topRightArea][latB]}, {areas[topRightArea][lonL]}, 0, 1
 End:
-Image: "{imageURLs[2]}"
+Image: {imageURLs[2]}
     {areas[bottomLeftArea][latT]}, {areas[bottomLeftArea][lonL]}, 0, 0
     {areas[bottomLeftArea][latT]}, {areas[bottomLeftArea][lonR]}, 1, 0
     {areas[bottomLeftArea][latB]}, {areas[bottomLeftArea][lonR]}, 1, 1
@@ -71,7 +71,7 @@ Image: "{imageURLs[2]}"
     {areas[bottomLeftArea][latB]}, {areas[bottomLeftArea][lonR]}, 1, 1
     {areas[bottomLeftArea][latB]}, {areas[bottomLeftArea][lonL]}, 0, 1
 End:
-Image: "{imageURLs[3]}"
+Image: {imageURLs[3]}
     {areas[bottomRightArea][latT]}, {areas[bottomRightArea][lonL]}, 0, 0
     {areas[bottomRightArea][latT]}, {areas[bottomRightArea][lonR]}, 1, 0
     {areas[bottomRightArea][latB]}, {areas[bottomRightArea][lonR]}, 1, 1
