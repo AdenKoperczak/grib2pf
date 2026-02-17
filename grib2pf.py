@@ -318,8 +318,12 @@ class MRMSTypedReflectivityPlacefile:
 
     def generate(self):
         if self.aws:
-            self.typeRefreshNeeded = self.typeAWS.update_key() or self.typeRefreshNeeded
-            self.reflRefreshNeeded = self.reflAWS.update_key() or self.reflRefreshNeeded
+            try:
+                self.typeRefreshNeeded = self.typeAWS.update_key() or self.typeRefreshNeeded
+                self.reflRefreshNeeded = self.reflAWS.update_key() or self.reflRefreshNeeded
+            except Exception as e:
+                self._log(f"Could not refresh. Trying again later: {e}")
+                return
 
             if not (self.typeRefreshNeeded and self.reflRefreshNeeded):
                 return
@@ -444,7 +448,12 @@ class HRRRPlaceFiles:
         sys.exit(0)
 
     def generate(self):
-        if not self.aws.update_key():
+
+        try:
+            if not self.aws.update_key():
+                return
+        except Exception as e:
+            self._log(f"Could not refresh. Trying again later: {e}")
             return
 
         if self.proc is not None and self.proc.is_alive():
