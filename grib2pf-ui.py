@@ -581,7 +581,8 @@ class PlacefileEditor(QWidget):
         ["Basic", "basic"],
         ["MRMS Typed Reflectivity", "MRMSTypedReflectivity"],
         ["HRRR", "HRRR"],
-        ["RTMA Rapid Update", "RTMA2P5_RU"]
+        ["RTMA Rapid Update", "RTMA2P5_RU"],
+        ["Air Quality Conus", "AQM_CONUS"],
     ]
 
     def __init__(self, *args, **kwargs):
@@ -722,6 +723,7 @@ class PlacefileEditor(QWidget):
         hrrr = False
         typedPrec = False
         rtmaru = False
+        aqm_conus = False
         dataType = "mrms"
         aws = self.dataWidgets["aws"].isChecked()
 
@@ -736,8 +738,11 @@ class PlacefileEditor(QWidget):
             case "RTMA2P5_RU":
                 rtmaru = True
                 dataType = "rtmaru"
-                aws = True
-
+                aws = False
+            case "AQM_CONUS":
+                aqm_conus = True
+                dataType = "aqm"
+                aws = False
 
         self.dataWidgets["product"].set_data_type(dataType)
 
