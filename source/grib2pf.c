@@ -635,9 +635,13 @@ void contour_image_data(MessageSettings* message, ImageData* input) {
             GET_INDEX(3, 1, 1)
 #undef GET_INDEX
 
-            if (indexes[0] == indexes[1] &&
-                indexes[0] == indexes[2] &&
-                indexes[0] == indexes[3]) {
+            if (
+                    indexes[0] == -1 || (
+                        (indexes[1] == -1 || indexes[0] == indexes[1]) &&
+                        (indexes[2] == -1 || indexes[0] == indexes[2]) &&
+                        (indexes[3] == -1 || indexes[0] == indexes[3])
+                    )
+                ) {
                 input->counts[is[0]] = 0;
             }
         }
