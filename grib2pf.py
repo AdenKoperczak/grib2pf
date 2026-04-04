@@ -750,8 +750,12 @@ async def run_setting(settings):
             awsHandler = AWSHandler(settings["product"])
 
             while True:
-                if awsHandler.update_key():
-                    placefile.generate(awsHandler.get_url())
+                try:
+                    if awsHandler.update_key():
+                        placefile.generate(awsHandler.get_url())
+                except Exception as e:
+                    placefile._log(f"Could not refresh. Trying again later: {e}")
+                    continue
                 await asyncio.sleep(settings.get("pullPeriod", 10))
             return
 
